@@ -1,0 +1,26 @@
+{
+  "name": "agent-api-marketplace",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "db:push": "drizzle-kit push"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1",
+    "@types/node": "^22",
+    "drizzle-kit": "^0.30",
+    "drizzle-orm": "^0.38",
+    "hono": "^4",
+    "jose": "^6",
+    "postgres": "^3",
+    "stripe": "^20.4.0",
+    "typescript": "^5"
+  },
+  "devDependencies": {
+    "tsx": "^4"
+  }
+}
