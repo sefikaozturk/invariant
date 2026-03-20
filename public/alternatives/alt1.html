@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>invariant — choose your path</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=IBM+Plex+Mono:wght@300;400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #0e0e10;
+  --surface: #161618;
+  --border: #2a2a2e;
+  --text: #c8c8cc;
+  --text-dim: #6a6a70;
+  --text-bright: #f0f0f2;
+  --accent: #00c853;
+  --accent-dim: rgba(0, 200, 83, 0.08);
+  --accent-bright: #00ff6a;
+  --hot: #e8384f;
+  --mono: 'IBM Plex Mono', monospace;
+  --serif: 'Playfair Display', Georgia, serif;
+  --sans: 'Inter', -apple-system, sans-serif;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── nav ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: 52px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 32px;
+  background: rgba(14, 14, 16, 0.9);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  z-index: 100;
+  font-family: var(--mono);
+  font-size: 13px;
+}
+nav .logo {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 18px;
+  color: var(--text-bright);
+  letter-spacing: -0.5px;
+}
+nav .logo span { color: var(--accent); }
+nav a {
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+nav a:hover { color: var(--accent); }
+
+/* ── main container ── */
+.main {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 52px 24px 24px;
+}
+
+/* ── header ── */
+.header {
+  text-align: center;
+  margin-bottom: 56px;
+  max-width: 640px;
+}
+.header h1 {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: clamp(28px, 5vw, 44px);
+  font-weight: 400;
+  color: var(--text-bright);
+  line-height: 1.2;
+  margin-bottom: 16px;
+}
+.header p {
+  font-size: 15px;
+  color: var(--text-dim);
+  line-height: 1.6;
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+/* ── three doors ── */
+.doors {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  max-width: 960px;
+  width: 100%;
+}
+
+.door {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 32px 28px;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+.door::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.door:hover {
+  border-color: rgba(0, 200, 83, 0.3);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 200, 83, 0.06);
+}
+.door:hover::before { opacity: 1; }
+
+.door.active {
+  grid-column: 1 / -1;
+  border-color: var(--accent);
+  cursor: default;
+  transform: none;
+}
+
+.door-number {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 16px;
+}
+.door-title {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 22px;
+  color: var(--text-bright);
+  margin-bottom: 12px;
+}
+.door-desc {
+  font-size: 14px;
+  color: var(--text-dim);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+.door-action {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--accent);
+  opacity: 0.7;
+}
+.door.active .door-action { display: none; }
+
+/* ── expanded flow ── */
+.flow {
+  display: none;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+.door.active .flow { display: block; }
+
+.flow-steps {
+  display: flex;
+  gap: 32px;
+  margin-bottom: 28px;
+}
+.flow-step {
+  flex: 1;
+}
+.flow-step-num {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+.flow-step h3 {
+  font-family: var(--serif);
+  font-size: 16px;
+  color: var(--text-bright);
+  font-weight: 400;
+  margin-bottom: 8px;
+}
+.flow-step p {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.flow-terminal {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  font-family: var(--mono);
+  font-size: 13px;
+  margin-bottom: 20px;
+}
+.flow-terminal .line {
+  margin-bottom: 6px;
+  opacity: 0;
+  animation: typeLine 0.3s ease forwards;
+}
+.flow-terminal .line.prompt { color: var(--accent); }
+.flow-terminal .line.output { color: var(--text-dim); }
+.flow-terminal .line.highlight { color: var(--accent-bright); }
+.flow-terminal .line:nth-child(1) { animation-delay: 0.1s; }
+.flow-terminal .line:nth-child(2) { animation-delay: 0.4s; }
+.flow-terminal .line:nth-child(3) { animation-delay: 0.7s; }
+.flow-terminal .line:nth-child(4) { animation-delay: 1.0s; }
+.flow-terminal .line:nth-child(5) { animation-delay: 1.3s; }
+.flow-terminal .line:nth-child(6) { animation-delay: 1.6s; }
+.flow-terminal .line:nth-child(7) { animation-delay: 1.9s; }
+.flow-terminal .line:nth-child(8) { animation-delay: 2.2s; }
+
+@keyframes typeLine {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.flow-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--accent);
+  color: var(--bg);
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 12px 24px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+.flow-cta:hover {
+  background: var(--accent-bright);
+  transform: translateY(-1px);
+}
+
+.flow-back {
+  display: inline-block;
+  margin-left: 16px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-dim);
+  cursor: pointer;
+  border: none;
+  background: none;
+  transition: color 0.2s;
+}
+.flow-back:hover { color: var(--text-bright); }
+
+/* ── subtle bg grid ── */
+.grid-bg {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── bottom bar ── */
+.bottom-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: 28px;
+  background: var(--accent);
+  display: flex; align-items: center;
+  overflow: hidden;
+  z-index: 100;
+}
+.bottom-bar-track {
+  display: flex;
+  animation: tickerScroll 30s linear infinite;
+  white-space: nowrap;
+}
+.bottom-bar span {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--bg);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  padding: 0 32px;
+}
+@keyframes tickerScroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* ── responsive ── */
+@media (max-width: 768px) {
+  .doors { grid-template-columns: 1fr; }
+  .flow-steps { flex-direction: column; gap: 20px; }
+  .header h1 { font-size: 28px; }
+  nav { padding: 0 16px; }
+  .main { padding: 52px 16px 48px; }
+}
+</style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+
+<nav>
+  <div class="logo"><span>invariant</span></div>
+  <a href="../index.html">← full site</a>
+</nav>
+
+<div class="main">
+  <div class="header">
+    <h1>what do you need?</h1>
+    <p>three ways in. pick yours. you'll be building in under a minute.</p>
+  </div>
+
+  <div class="doors">
+    <!-- door 1: marketplace -->
+    <div class="door" onclick="openDoor(this, 1)">
+      <div class="door-number">01 — marketplace</div>
+      <div class="door-title">buy cheap credits</div>
+      <div class="door-desc">other developers' unused API credits at 85–95% off retail. Anthropic, OpenAI, Google, Mistral — whatever you need, someone's selling.</div>
+      <div class="door-action">click to start →</div>
+      <div class="flow">
+        <div class="flow-steps">
+          <div class="flow-step">
+            <div class="flow-step-num">step 1</div>
+            <h3>search what's available</h3>
+            <p>browse credits by provider, quantity, and discount. real-time listings from developers offloading excess.</p>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-num">step 2</div>
+            <h3>buy with one click</h3>
+            <p>Stripe-secured escrow. credits transfer to your balance instantly. no signup forms, no dashboards.</p>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-num">step 3</div>
+            <h3>use immediately</h3>
+            <p>credits are live. route them through the gateway or use them directly. sell what you don't use later.</p>
+          </div>
+        </div>
+        <div class="flow-terminal">
+          <div class="line prompt">$ invariant search anthropic</div>
+          <div class="line output">found 3 listings:</div>
+          <div class="line output">  #1201 — 500K tokens, Claude Sonnet · $18.40 (88% retail)</div>
+          <div class="line output">  #1199 — 1M tokens, Claude Opus · $42.00 (84% retail)</div>
+          <div class="line output">  #1195 — 200K tokens, Claude Haiku · $3.20 (91% retail)</div>
+          <div class="line prompt">$ invariant buy 1201</div>
+          <div class="line highlight">✓ purchased. 500K tokens added to balance.</div>
+          <div class="line output">  total balance: 720K tokens · $22.60 remaining</div>
+        </div>
+        <a href="#" class="flow-cta">npm install invariant-cli →</a>
+        <button class="flow-back" onclick="event.stopPropagation(); closeDoors()">← back to options</button>
+      </div>
+    </div>
+
+    <!-- door 2: gateway -->
+    <div class="door" onclick="openDoor(this, 2)">
+      <div class="door-number">02 — gateway</div>
+      <div class="door-title">one key, every API</div>
+      <div class="door-desc">stop juggling 12 API keys. one endpoint that routes to the best provider for your use case — by price, latency, or region. automatically.</div>
+      <div class="door-action">click to start →</div>
+      <div class="flow">
+        <div class="flow-steps">
+          <div class="flow-step">
+            <div class="flow-step-num">step 1</div>
+            <h3>get your key</h3>
+            <p>one API key. works with every provider we support: AI models, maps, SMS, email, payments, storage.</p>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-num">step 2</div>
+            <h3>call one endpoint</h3>
+            <p>POST /v1/chat/completions — same as OpenAI's format, but it routes to whichever model fits best. or use /v1/resolve for any API category.</p>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-num">step 3</div>
+            <h3>we handle the rest</h3>
+            <p>routing, failover, cost optimization. you write code against one API. we negotiate with dozens.</p>
+          </div>
+        </div>
+        <div class="flow-terminal">
+          <div class="line prompt">$ curl -X POST https://api.invariant.dev/v1/chat/completions \</div>
+          <div class="line output">    -H "Authorization: Bearer inv_k_..." \</div>
+          <div class="line output">    -d '{"model": "best", "messages": [...]}'</div>
+          <div class="line highlight">→ routed to: claude-sonnet-4-6 (lowest cost for this query)</div>
+          <div class="line output">→ latency: 340ms · cost: $0.0021</div>
+          <div class="line output">→ response: {"choices": [{"message": {"content": "..."}}]}</div>
+        </div>
+        <a href="#" class="flow-cta">get your API key →</a>
+        <button class="flow-back" onclick="event.stopPropagation(); closeDoors()">← back to options</button>
+      </div>
+    </div>
+
+    <!-- door 3: agents -->
+    <div class="door" onclick="openDoor(this, 3)">
+      <div class="door-number">03 — agents</div>
+      <div class="door-title">describe it, we build it</div>
+      <div class="door-desc">tell your agent what to build. it picks the APIs, provisions access, handles payment. you funded $50 — the restaurant finder cost $3.20.</div>
+      <div class="door-action">click to start →</div>
+      <div class="flow">
+        <div class="flow-steps">
+          <div class="flow-step">
+            <div class="flow-step-num">step 1</div>
+            <h3>fund your balance</h3>
+            <p>one Stripe payment. $10, $50, $200 — whatever you want. this is the only financial decision you make.</p>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-num">step 2</div>
+            <h3>give your agent a key</h3>
+            <p>your AI coding agent (Cursor, Claude Code, Copilot) gets an Invariant API key. that's the entire integration.</p>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-num">step 3</div>
+            <h3>say "build me X"</h3>
+            <p>agent discovers what APIs it needs, provisions them through the gateway, builds the thing. you watch.</p>
+          </div>
+        </div>
+        <div class="flow-terminal">
+          <div class="line prompt">agent → "build a restaurant finder for downtown SF"</div>
+          <div class="line output">resolving APIs...</div>
+          <div class="line output">  ✓ geocoding: Google Maps ($0.005/call)</div>
+          <div class="line output">  ✓ reviews: Yelp Fusion ($0.01/call)</div>
+          <div class="line output">  ✓ reasoning: Claude Sonnet ($0.003/1K tokens)</div>
+          <div class="line highlight">  total estimated cost: $3.20</div>
+          <div class="line output">provisioning access... done.</div>
+          <div class="line highlight">building restaurant-finder.py... complete.</div>
+        </div>
+        <a href="#" class="flow-cta">fund balance & start →</a>
+        <button class="flow-back" onclick="event.stopPropagation(); closeDoors()">← back to options</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="bottom-bar">
+  <div class="bottom-bar-track">
+    <span>marketplace</span><span>·</span>
+    <span>gateway</span><span>·</span>
+    <span>agents</span><span>·</span>
+    <span>the last API you'll ever need</span><span>·</span>
+    <span>marketplace</span><span>·</span>
+    <span>gateway</span><span>·</span>
+    <span>agents</span><span>·</span>
+    <span>the last API you'll ever need</span><span>·</span>
+    <span>marketplace</span><span>·</span>
+    <span>gateway</span><span>·</span>
+    <span>agents</span><span>·</span>
+    <span>the last API you'll ever need</span><span>·</span>
+  </div>
+</div>
+
+<script>
+function openDoor(el, num) {
+  if (el.classList.contains('active')) return;
+  document.querySelectorAll('.door').forEach(d => {
+    if (d !== el) d.style.display = 'none';
+  });
+  el.classList.add('active');
+}
+
+function closeDoors() {
+  document.querySelectorAll('.door').forEach(d => {
+    d.classList.remove('active');
+    d.style.display = '';
+  });
+}
+</script>
+
+</body>
+</html>

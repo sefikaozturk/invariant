@@ -3,64 +3,1376 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>OpenClaw — Agent Credit Marketplace</title>
+<title>Invariant — The Last API You'll Ever Need</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: #0a0a0a; color: #e0e0e0;
-    min-height: 100vh; display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-  }
-  .container { max-width: 640px; padding: 40px 24px; text-align: center; }
-  h1 { font-size: 2.5rem; color: #fff; margin-bottom: 8px; letter-spacing: -1px; }
-  h1 span { color: #2E86AB; }
-  .tagline { color: #888; font-size: 1.1rem; margin-bottom: 40px; }
-  .endpoints {
-    text-align: left; background: #111; border: 1px solid #222;
-    border-radius: 8px; padding: 24px; margin-bottom: 32px;
-  }
-  .endpoints h2 { font-size: 0.85rem; color: #666; text-transform: uppercase;
-    letter-spacing: 1px; margin-bottom: 16px; }
-  .endpoint { margin-bottom: 12px; font-family: 'SF Mono', monospace; font-size: 0.9rem; }
-  .method { color: #2E86AB; font-weight: 600; display: inline-block; width: 50px; }
-  .path { color: #ccc; }
-  .desc { color: #666; font-size: 0.8rem; margin-left: 50px; }
-  .auth-btn {
-    display: inline-block; padding: 12px 32px; background: #2E86AB;
-    color: #fff; text-decoration: none; border-radius: 6px;
-    font-weight: 600; font-size: 1rem; transition: background 0.2s;
-  }
-  .auth-btn:hover { background: #247a9d; }
-  .footer { margin-top: 48px; color: #444; font-size: 0.8rem; }
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700&family=IBM+Plex+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+:root {
+  --bg: #0e0e10;
+  --surface: #161618;
+  --border: #2a2a2e;
+  --text: #c8c8cc;
+  --text-dim: #6a6a70;
+  --text-bright: #f0f0f2;
+  --accent: #00c853;
+  --accent-dim: rgba(0, 200, 83, 0.1);
+  --accent-bright: #00ff6a;
+  --hot: #e8384f;
+  --electric: #7b68ee;
+  --cyan: #00d4aa;
+  --terminal-bg: #08080a;
+  --terminal-border: #1e1e22;
+  --terminal-text: #a0a0a8;
+  --terminal-dim: #505058;
+  --terminal-bright: #e8e8f0;
+  --mono: 'IBM Plex Mono', monospace;
+  --serif: 'Playfair Display', Georgia, serif;
+  --sans: 'Inter', -apple-system, sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+::selection { background: var(--accent); color: #000; }
+
+/* ── canvases ──────────────────────────────────────── */
+#bg-canvas, #glyph-canvas, #trail-canvas {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+}
+#glyph-canvas { z-index: -3; opacity: 0.06; }
+#bg-canvas { z-index: -2; }
+#trail-canvas { z-index: -1; }
+
+/* ── gradient orbs removed — particles only ────────── */
+
+/* ── scanlines ─────────────────────────────────────── */
+.scanlines {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: repeating-linear-gradient(transparent, transparent 2px, rgba(255,255,255,0.008) 2px, rgba(255,255,255,0.008) 4px);
+  pointer-events: none; z-index: 9998;
+}
+
+/* ── giant background text ─────────────────────────── */
+.bg-text {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--serif);
+  font-size: 18vw;
+  font-weight: 900;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(0,200,83,0.04);
+  pointer-events: none;
+  z-index: -1;
+  white-space: nowrap;
+  font-style: italic;
+  letter-spacing: -0.04em;
+  user-select: none;
+}
+
+/* ── floating editorial words ──────────────────────── */
+.floating-words {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.float-word {
+  position: absolute;
+  font-family: var(--serif);
+  font-style: italic;
+  white-space: nowrap;
+  opacity: 0;
+  animation: float-in 1.2s ease-out forwards;
+}
+
+@keyframes float-in {
+  0% { opacity: 0; transform: translateY(15px) scale(0.95); }
+  50% { opacity: 1; }
+  100% { opacity: 0.7; transform: translateY(-5px) scale(1); }
+}
+
+/* ── rotating ring text ────────────────────────────── */
+.orbit-ring {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px; height: 600px;
+  pointer-events: none;
+  z-index: -1;
+  animation: spin-slow 60s linear infinite;
+}
+@keyframes spin-slow { 0% { transform: translate(-50%, -50%) rotate(0deg); } 100% { transform: translate(-50%, -50%) rotate(360deg); } }
+
+.orbit-ring text {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  fill: rgba(0,200,83,0.06);
+}
+
+/* ── marquee ticker ────────────────────────────────── */
+.ticker {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 50;
+  overflow: hidden;
+  background: var(--accent);
+  color: #000;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 7px 0;
+}
+
+.ticker-inner {
+  display: flex;
+  gap: 50px;
+  animation: scroll-ticker 30s linear infinite;
+  white-space: nowrap;
+  width: max-content;
+}
+
+.ticker-inner span { flex-shrink: 0; }
+.ticker-inner .sep { opacity: 0.4; }
+
+@keyframes scroll-ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* ── top marquee (reverse) ─────────────────────────── */
+.ticker-top {
+  position: fixed;
+  top: 54px; left: 0; right: 0;
+  z-index: 1;
+  overflow: hidden;
+  font-family: var(--serif);
+  font-size: 0.75rem;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  color: rgba(0,200,83,0.1);
+  padding: 6px 0;
+  pointer-events: none;
+}
+.ticker-top .ticker-inner {
+  animation: scroll-ticker-rev 45s linear infinite;
+}
+@keyframes scroll-ticker-rev {
+  0% { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
+}
+
+/* ── corner hash ───────────────────────────────────── */
+.corner-hash {
+  position: fixed; bottom: 36px; right: 20px;
+  font-family: var(--mono); font-size: 0.5rem;
+  color: var(--border); z-index: 50; letter-spacing: 0.05em;
+}
+
+/* ── nav ───────────────────────────────────────────── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  padding: 16px 48px;
+  display: flex; justify-content: space-between; align-items: center;
+  background: rgba(14,14,16,0.88);
+  backdrop-filter: blur(24px);
+  border-bottom: 1px solid var(--border);
+}
+
+.logo {
+  font-family: var(--serif);
+  font-size: 1.3rem; font-weight: 800;
+  color: var(--text-bright);
+  letter-spacing: -0.01em;
+  font-style: italic;
+  transition: all 0.3s;
+}
+.logo::after { content: '.'; color: var(--accent); }
+.logo:hover { letter-spacing: 0.08em; }
+
+.nav-status {
+  font-family: var(--mono);
+  font-size: 0.55rem; color: var(--text-dim);
+  letter-spacing: 0.08em;
+  display: flex; align-items: center; gap: 8px;
+}
+.nav-status .dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--accent);
+  animation: pulse-dot 2s ease-in-out infinite;
+  box-shadow: 0 0 8px var(--accent);
+}
+@keyframes pulse-dot { 0%,100%{opacity:1;box-shadow:0 0 8px var(--accent)} 50%{opacity:0.3;box-shadow:none} }
+
+.nav-links {
+  display: flex; gap: 36px;
+  font-family: var(--mono);
+  font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase;
+}
+.nav-links a { color: var(--text-dim); transition: all 0.3s; text-decoration: none; position: relative; }
+.nav-links a::after { content: ''; position: absolute; bottom: -4px; left: 0; width: 0; height: 1px; background: var(--accent); transition: width 0.3s; }
+.nav-links a:hover { color: var(--accent); }
+.nav-links a:hover::after { width: 100%; }
+
+a { color: var(--text); text-decoration: none; }
+
+/* ── hero (disruption statement first) ─────────────── */
+.hero {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  padding: 56px 48px 28px;
+  position: relative;
+  z-index: 2;
+}
+
+.hero-content { max-width: 1000px; text-align: center; }
+
+.hero h1 {
+  font-family: var(--serif);
+  font-size: 5.5rem; font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin-bottom: 32px;
+}
+
+.hero h1 .old {
+  text-decoration: line-through;
+  text-decoration-color: var(--hot);
+  text-decoration-thickness: 4px;
+  color: var(--text-dim);
+}
+
+.hero h1 .new {
+  color: var(--accent);
+  font-style: italic;
+  text-shadow: 0 0 80px rgba(0,200,83,0.2);
+  display: block;
+  margin-top: 16px;
+}
+
+.hero-sub {
+  font-family: var(--sans);
+  font-size: 1.1rem; color: var(--text-dim);
+  line-height: 1.9; font-weight: 400;
+  max-width: 480px; margin: 0 auto 32px;
+}
+.hero-sub strong { color: var(--text-bright); font-weight: 600; }
+
+.hero-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+
+.btn {
+  font-family: var(--mono); font-size: 0.7rem; font-weight: 500;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 14px 36px; border: 1px solid var(--border);
+  background: transparent; color: var(--text); cursor: pointer;
+  transition: all 0.3s; position: relative; overflow: hidden;
+}
+.btn::before {
+  content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0,200,83,0.05), transparent);
+  transition: left 0.5s;
+}
+.btn:hover::before { left: 100%; }
+.btn:hover { border-color: var(--text-dim); color: var(--text-bright); transform: translateY(-2px); }
+
+.btn-primary {
+  border-color: var(--accent); color: #000;
+  background: var(--accent);
+  box-shadow: 0 4px 24px rgba(0,200,83,0.25);
+  font-weight: 600;
+}
+.btn-primary:hover {
+  background: var(--accent-bright); border-color: var(--accent-bright);
+  box-shadow: 0 8px 36px rgba(0,200,83,0.35);
+  transform: translateY(-2px);
+  color: #000;
+}
+
+.scroll-indicator {
+  position: absolute; bottom: 36px; left: 50%; transform: translateX(-50%);
+  font-family: var(--mono);
+  font-size: 0.55rem; letter-spacing: 0.3em; text-transform: uppercase;
+  color: var(--text-dim);
+  animation: bounce-fade 2.5s ease-in-out infinite;
+}
+@keyframes bounce-fade {
+  0%,100%{ opacity:0.3; transform: translateX(-50%) translateY(0); }
+  50%{ opacity:0.7; transform: translateX(-50%) translateY(-8px); }
+}
+
+/* ── secondary hero ────────────────────────────────── */
+.hero2 {
+  padding: 140px 48px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  position: relative;
+  z-index: 2;
+}
+
+.hero2-label {
+  font-family: var(--mono);
+  font-size: 0.65rem; letter-spacing: 0.25em;
+  color: var(--accent); font-weight: 500;
+  margin-bottom: 48px;
+  display: inline-block;
+  padding: 8px 24px;
+  border: 1px solid rgba(0,200,83,0.3);
+  text-transform: uppercase;
+}
+
+.hero2 h2 {
+  font-family: var(--serif);
+  font-size: 5.5rem; font-weight: 900;
+  color: var(--text-bright);
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  margin-bottom: 32px;
+}
+
+.hero2 h2 .strike {
+  text-decoration: line-through;
+  color: var(--text-dim);
+  text-decoration-color: var(--hot);
+  text-decoration-thickness: 3px;
+}
+
+.hero2 h2 .pop {
+  color: var(--accent);
+  font-style: italic;
+  text-shadow: 0 0 60px rgba(0,200,83,0.15);
+}
+
+/* ── sections ──────────────────────────────────────── */
+section {
+  padding: 140px 48px;
+  border-top: 1px solid var(--border);
+  position: relative;
+  z-index: 2;
+}
+
+.section-inner { max-width: 780px; margin: 0 auto; }
+
+.section-label {
+  font-family: var(--mono);
+  font-size: 0.6rem; letter-spacing: 0.25em; text-transform: uppercase;
+  color: var(--text-dim); margin-bottom: 6px;
+}
+.section-label::before { content: '// '; color: var(--border); }
+
+.section-num {
+  font-family: var(--mono); font-size: 0.6rem;
+  color: var(--accent); margin-bottom: 48px; opacity: 0.6;
+}
+
+.section-title {
+  font-family: var(--serif);
+  font-size: 3.5rem; font-weight: 800;
+  color: var(--text-bright); line-height: 1.1;
+  margin-bottom: 48px; letter-spacing: -0.02em;
+}
+
+/* ── reveal animation ──────────────────────────────── */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.9s ease, transform 0.9s ease;
+}
+.reveal.visible, .reveal.fallback {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── scrolling manifesto ───────────────────────────── */
+.manifesto {
+  padding: 60px 0;
+  border-top: 1px solid var(--border);
+  overflow: hidden;
+  position: relative;
+  z-index: 2;
+}
+.manifesto-inner {
+  display: flex;
+  animation: scroll-manifesto 22s linear infinite;
+  white-space: nowrap;
+  width: max-content;
+  gap: 60px;
+}
+.manifesto-inner span {
+  font-family: var(--serif);
+  font-size: 5rem;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -0.03em;
+  flex-shrink: 0;
+}
+.manifesto-inner .m-accent { color: var(--accent); }
+.manifesto-inner .m-dim { color: transparent; -webkit-text-stroke: 1px var(--border); }
+.manifesto-inner .m-hot { color: var(--hot); opacity: 0.2; }
+
+@keyframes scroll-manifesto {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* ── problem ───────────────────────────────────────── */
+.problem-text {
+  font-family: var(--sans);
+  font-size: 1rem; color: var(--text-dim);
+  line-height: 2; font-weight: 400;
+  margin-bottom: 56px; max-width: 540px;
+}
+
+.problem-terminal {
+  background: var(--terminal-bg);
+  border: 1px solid var(--terminal-border);
+  border-radius: 10px;
+  font-family: var(--mono);
+  font-size: 0.72rem; line-height: 2.2;
+  padding: 36px;
+  position: relative;
+  color: var(--terminal-text);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+}
+
+.problem-terminal::before {
+  content: 'terminal'; position: absolute;
+  top: -1px; right: 36px;
+  font-size: 0.5rem; letter-spacing: 0.15em;
+  text-transform: uppercase; color: var(--terminal-dim);
+  background: var(--bg); padding: 0 12px;
+  transform: translateY(-50%);
+}
+
+.t-dim { color: var(--terminal-dim); }
+.t-accent { color: var(--accent-bright); }
+.t-bright { color: var(--terminal-bright); }
+.t-hot { color: var(--hot); }
+
+/* ── layers ────────────────────────────────────────── */
+.layers-grid {
+  display: grid; grid-template-columns: 1fr; gap: 0;
+  border: 1px solid var(--border); border-radius: 10px;
+  margin-bottom: 36px; position: relative; overflow: hidden;
+  background: rgba(255,255,255,0.02);
+}
+
+.layers-grid::before {
+  content: 'system.architecture'; position: absolute;
+  top: -1px; left: 32px;
+  font-family: var(--mono); font-size: 0.5rem;
+  letter-spacing: 0.1em; color: var(--text-dim);
+  background: var(--bg); padding: 0 10px;
+  transform: translateY(-50%);
+}
+
+.layer {
+  padding: 44px; border-bottom: 1px solid var(--border);
+  display: grid; grid-template-columns: 80px 1fr;
+  gap: 32px; align-items: start;
+  transition: all 0.4s;
+}
+.layer:hover { background: rgba(0,200,83,0.02); padding-left: 52px; }
+.layer:last-child { border-bottom: none; }
+
+.layer-num {
+  font-family: var(--serif);
+  font-size: 2.8rem; font-weight: 800;
+  color: var(--accent); line-height: 1;
+  opacity: 0.2;
+  font-style: italic;
+  transition: opacity 0.3s;
+}
+.layer:hover .layer-num { opacity: 0.5; }
+
+.layer-name {
+  font-family: var(--serif);
+  font-size: 1.2rem;
+  color: var(--text-bright); margin-bottom: 10px;
+  font-weight: 700;
+  font-style: italic;
+}
+
+.layer-desc {
+  font-family: var(--sans);
+  font-size: 0.88rem; color: var(--text-dim);
+  line-height: 1.9; font-weight: 400;
+}
+
+.layer-tags {
+  margin-top: 16px; display: flex; flex-wrap: wrap; gap: 6px;
+}
+.layer-tags span {
+  font-family: var(--mono); font-size: 0.6rem;
+  padding: 4px 14px; border: 1px solid var(--border);
+  border-radius: 20px; color: var(--text-dim);
+  transition: all 0.3s;
+}
+.layer-tags span:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); transform: scale(1.05); }
+
+.flywheel-line {
+  font-family: var(--mono); font-size: 0.65rem;
+  color: var(--text-dim); text-align: center;
+  padding: 20px 24px; border: 1px dashed rgba(0,200,83,0.15);
+  border-radius: 8px; letter-spacing: 0.03em;
+}
+.flywheel-line span { color: var(--accent); font-weight: 600; }
+
+/* ── demo ──────────────────────────────────────────── */
+.demo-buttons {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px;
+}
+
+.demo-btn {
+  padding: 10px 18px; background: transparent;
+  border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text-dim); font-family: var(--mono);
+  font-size: 0.65rem; cursor: pointer;
+  transition: all 0.25s; letter-spacing: 0.02em;
+}
+.demo-btn:hover { border-color: var(--text-dim); color: var(--text); transform: translateY(-2px); }
+
+.demo-btn.primary {
+  border-color: var(--accent); color: var(--accent); font-weight: 500;
+}
+.demo-btn.primary:hover {
+  background: var(--accent); color: #000;
+  box-shadow: 0 4px 20px rgba(0,200,83,0.25);
+  transform: translateY(-2px);
+}
+
+.demo-terminal {
+  background: var(--terminal-bg);
+  border: 1px solid var(--terminal-border);
+  border-radius: 10px; position: relative;
+  color: var(--terminal-text);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+}
+
+.demo-terminal::before {
+  content: 'sandbox'; position: absolute;
+  top: -1px; right: 36px;
+  font-size: 0.5rem; letter-spacing: 0.15em;
+  text-transform: uppercase; color: var(--terminal-dim);
+  background: var(--bg); padding: 0 12px;
+  transform: translateY(-50%);
+}
+
+.demo-output {
+  padding: 36px; min-height: 260px; max-height: 440px;
+  overflow-y: auto; font-family: var(--mono);
+  font-size: 0.72rem; line-height: 1.9;
+}
+.demo-output::-webkit-scrollbar { width: 2px; }
+.demo-output::-webkit-scrollbar-track { background: transparent; }
+.demo-output::-webkit-scrollbar-thumb { background: var(--terminal-border); }
+
+.demo-output .line { white-space: pre-wrap; word-break: break-all; }
+.demo-output .line-prompt { color: var(--terminal-dim); }
+.demo-output .line-cmd { color: var(--terminal-bright); }
+.demo-output .line-key { color: var(--terminal-text); }
+.demo-output .line-str { color: #c8a060; }
+.demo-output .line-num { color: var(--accent-bright); }
+.demo-output .line-null { color: var(--terminal-dim); }
+.demo-output .line-err { color: var(--hot); }
+.demo-output .line-dim { color: var(--terminal-dim); }
+.demo-output .line-success { color: var(--accent-bright); }
+.demo-output .line-amber { color: #c8a060; }
+
+.demo-bar {
+  display: flex; justify-content: space-between;
+  padding: 12px 36px; border-top: 1px solid var(--terminal-border);
+  font-family: var(--mono);
+  font-size: 0.58rem; color: var(--terminal-dim); letter-spacing: 0.05em;
+}
+.demo-bar .bal { color: var(--accent-bright); }
+
+.demo-input-row {
+  display: flex; align-items: center;
+  border-top: 1px solid var(--terminal-border); padding: 0 36px;
+}
+.demo-input-row .prompt-label {
+  color: var(--accent); font-family: var(--mono);
+  font-size: 0.72rem;
+  white-space: nowrap; padding-right: 12px; user-select: none; font-weight: 500;
+}
+.demo-input-row input {
+  flex: 1; background: none; border: none; outline: none;
+  color: var(--terminal-bright); font-family: var(--mono);
+  font-size: 0.72rem; padding: 16px 0; caret-color: var(--accent);
+}
+.demo-input-row input::placeholder { color: var(--terminal-dim); opacity: 0.4; }
+
+.demo-hint {
+  margin-top: 16px; font-family: var(--mono);
+  font-size: 0.55rem; color: var(--text-dim); letter-spacing: 0.06em;
+}
+
+/* ── steps ─────────────────────────────────────────── */
+.steps-list {
+  border: 1px solid var(--border); border-radius: 10px;
+  overflow: hidden; position: relative;
+  background: rgba(255,255,255,0.02);
+}
+.steps-list::before {
+  content: 'init.sequence'; position: absolute; top: -1px; left: 32px;
+  font-family: var(--mono); font-size: 0.5rem;
+  letter-spacing: 0.1em; color: var(--text-dim);
+  background: var(--bg); padding: 0 10px; transform: translateY(-50%);
+}
+
+.step-item {
+  padding: 36px 44px; border-bottom: 1px solid var(--border);
+  display: grid; grid-template-columns: 50px 1fr;
+  gap: 24px; align-items: start;
+  transition: all 0.4s;
+}
+.step-item:hover { background: rgba(0,200,83,0.02); padding-left: 52px; }
+.step-item:last-child { border-bottom: none; }
+
+.step-num {
+  font-family: var(--serif); font-size: 1.8rem; font-weight: 800;
+  color: var(--accent); opacity: 0.3;
+  font-style: italic;
+}
+.step-title {
+  font-family: var(--serif); font-size: 1.1rem;
+  color: var(--text-bright); margin-bottom: 8px; font-weight: 700;
+}
+.step-desc {
+  font-family: var(--sans); font-size: 0.85rem;
+  color: var(--text-dim); line-height: 1.8; font-weight: 400;
+}
+.step-desc code {
+  font-family: var(--mono);
+  color: var(--accent); background: var(--accent-dim);
+  padding: 2px 8px; border-radius: 4px; font-size: 0.72rem;
+}
+
+/* ── api table ─────────────────────────────────────── */
+.api-table {
+  width: 100%; border: 1px solid var(--border); border-radius: 10px;
+  border-collapse: separate; border-spacing: 0; overflow: hidden;
+  background: rgba(255,255,255,0.02);
+}
+.api-table th {
+  text-align: left; padding: 14px 24px;
+  font-family: var(--mono);
+  font-size: 0.55rem; color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: 0.15em;
+  font-weight: 500; border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.api-table td {
+  padding: 14px 24px; font-family: var(--mono);
+  font-size: 0.72rem; border-bottom: 1px solid var(--border);
+}
+.api-table tr:last-child td { border-bottom: none; }
+.api-table tr:hover td { background: rgba(0,200,83,0.02); }
+.api-table .method { font-size: 0.58rem; font-weight: 600; letter-spacing: 0.05em; }
+.api-table .m-get { color: var(--accent); }
+.api-table .m-post { color: var(--electric); }
+.api-table .path { color: var(--text-bright); font-weight: 500; }
+.api-table .desc { font-family: var(--sans); color: var(--text-dim); font-weight: 400; }
+.api-table .auth { font-size: 0.58rem; color: var(--text-dim); }
+.api-group {
+  padding: 10px 24px; font-family: var(--mono);
+  font-size: 0.55rem; color: var(--accent);
+  text-transform: uppercase; letter-spacing: 0.2em; font-weight: 600;
+  background: var(--accent-dim); border-bottom: 1px solid var(--border);
+}
+
+/* ── footer ────────────────────────────────────────── */
+footer {
+  padding: 80px 48px 100px; border-top: 1px solid var(--border);
+  text-align: center;
+  position: relative; z-index: 2;
+}
+footer p {
+  font-family: var(--serif); font-size: 0.9rem;
+  color: var(--text-dim); font-style: italic;
+}
+footer .links {
+  display: flex; justify-content: center; gap: 32px; margin-top: 20px;
+}
+footer .links a {
+  font-family: var(--mono);
+  font-size: 0.58rem; color: var(--text-dim);
+  letter-spacing: 0.12em; text-transform: uppercase;
+}
+footer .links a:hover { color: var(--accent); }
+
+/* ── responsive ────────────────────────────────────── */
+@media (max-width: 768px) {
+  .hero h1 { font-size: 3rem; }
+  .hero2 h2 { font-size: 3rem; }
+  .manifesto-inner span { font-size: 3rem; }
+  nav { padding: 14px 24px; }
+  .nav-links { gap: 20px; }
+  .nav-status { display: none; }
+  section, .hero2 { padding: 100px 24px; }
+  .layer { grid-template-columns: 1fr; gap: 16px; }
+  .layer-num { font-size: 2rem; }
+  .hero { padding: 0 24px; }
+  .ticker { font-size: 0.55rem; }
+  .bg-text { font-size: 28vw; }
+  .orbit-ring { width: 350px; height: 350px; }
+}
+
+@media (max-width: 480px) {
+  .hero h1 { font-size: 2rem; }
+  .hero2 h2 { font-size: 2rem; }
+  .manifesto-inner span { font-size: 2rem; }
+  .nav-links { display: none; }
+  .demo-buttons { gap: 4px; }
+  .demo-btn { font-size: 0.58rem; padding: 6px 10px; }
+  .ticker-top { display: none; }
+}
 </style>
 </head>
 <body>
-<div class="container">
-  <h1>Open<span>Claw</span></h1>
-  <p class="tagline">the market layer for agent compute</p>
 
-  <div class="endpoints">
-    <h2>Agent API</h2>
-    <div class="endpoint"><span class="method">GET</span> <span class="path">/api/agent/search</span></div>
-    <div class="desc">find available credits</div>
-    <div class="endpoint"><span class="method">POST</span> <span class="path">/api/agent/buy</span></div>
-    <div class="desc">instant purchase from balance</div>
-    <div class="endpoint"><span class="method">GET</span> <span class="path">/api/agent/market-data</span></div>
-    <div class="desc">price aggregates per provider</div>
-    <div class="endpoint"><span class="method">GET</span> <span class="path">/api/agent/balance</span></div>
-    <div class="desc">check balance</div>
-    <div class="endpoint"><span class="method">POST</span> <span class="path">/api/agent/deposit</span></div>
-    <div class="desc">fund via Stripe</div>
-    <div class="endpoint"><span class="method">POST</span> <span class="path">/api/agent/list</span></div>
-    <div class="desc">create listing</div>
-    <div class="endpoint"><span class="method">GET</span> <span class="path">/api/agent/status</span></div>
-    <div class="desc">active transactions</div>
-  </div>
+<canvas id="glyph-canvas"></canvas>
+<canvas id="bg-canvas"></canvas>
+<canvas id="trail-canvas"></canvas>
+<div class="scanlines"></div>
+<div class="bg-text">INVARIANT</div>
+<div class="floating-words" id="floating-words"></div>
 
-  <a href="/api/auth/github" class="auth-btn">Sign in with GitHub</a>
+<svg class="orbit-ring" viewBox="0 0 600 600">
+  <defs><path id="ring" d="M 300,300 m -260,0 a 260,260 0 1,1 520,0 a 260,260 0 1,1 -520,0"/></defs>
+  <text><textPath href="#ring">ONE KEY — EVERY API — ZERO DASHBOARDS — FUND ONCE BUILD ANYTHING — THE LAST API — ONE KEY — EVERY API — ZERO DASHBOARDS — FUND ONCE BUILD ANYTHING — THE LAST API — </textPath></text>
+</svg>
 
-  <p class="footer">authenticate agents with <code>Authorization: Bearer oc_live_...</code></p>
+<div class="ticker-top">
+  <div class="ticker-inner" id="ticker-top"></div>
 </div>
+
+<nav>
+  <div class="logo">Invariant</div>
+  <div class="nav-status"><div class="dot"></div> systems nominal</div>
+  <div class="nav-links">
+    <a href="#thesis">thesis</a>
+    <a href="#layers">architecture</a>
+    <a href="#demo">demo</a>
+    <a href="#api">api</a>
+  </div>
+</nav>
+
+<!-- ── hero: the manifesto ─────────────────────────── -->
+<section class="hero" style="border: none;">
+  <div class="hero-content">
+    <h1>
+      <span class="old">sign up. enter payment. read docs. integrate. manage keys.</span>
+      <span class="new">or just build.</span>
+    </h1>
+    <p class="hero-sub">
+      Describe what to build. Your agent picks the APIs, provisions access, handles payment.
+      <strong>You never touch an API dashboard again.</strong>
+    </p>
+    <div class="hero-actions">
+      <a href="#demo" class="btn btn-primary">try the demo</a>
+      <a href="#api" class="btn">documentation</a>
+    </div>
+  </div>
+  <div class="scroll-indicator">scroll</div>
+</section>
+
+<!-- ── secondary hero ──────────────────────────────── -->
+<div class="hero2 reveal">
+  <div class="hero2-label">the last api you'll ever need</div>
+  <h2>
+    <span class="strike">5 APIs.</span><br>
+    <span class="pop">one call.</span>
+  </h2>
+</div>
+
+<!-- ── scrolling manifesto ─────────────────────────── -->
+<div class="manifesto">
+  <div class="manifesto-inner" id="manifesto"></div>
+</div>
+
+<!-- ── problem ──────────────────────────────────────── -->
+<section id="thesis">
+  <div class="section-inner reveal">
+    <div class="section-label">thesis</div>
+    <div class="section-num">001</div>
+    <h2 class="section-title">The API procurement cycle is dead.</h2>
+
+    <p class="problem-text">
+      Every project starts the same way: research providers, compare pricing, create accounts, enter payment, read docs, integrate, manage keys, monitor usage. For every API. For every project. We automated it.
+    </p>
+
+    <div class="problem-terminal">
+      <div><span class="t-dim">$ cat legacy_workflow.log</span></div>
+      <div><span class="t-dim" style="text-decoration: line-through; opacity: 0.4;">[01] signup google maps ........... 4 min</span></div>
+      <div><span class="t-dim" style="text-decoration: line-through; opacity: 0.4;">[02] signup yelp api .............. 6 min</span></div>
+      <div><span class="t-dim" style="text-decoration: line-through; opacity: 0.4;">[03] signup anthropic ............. 3 min</span></div>
+      <div><span class="t-dim" style="text-decoration: line-through; opacity: 0.4;">[04] enter payment x3 ............ 8 min</span></div>
+      <div><span class="t-dim" style="text-decoration: line-through; opacity: 0.4;">[05] read docs x3 ................ 45 min</span></div>
+      <div><span class="t-dim" style="text-decoration: line-through; opacity: 0.4;">[06] manage 3 api keys ........... ongoing</span></div>
+      <div><span class="t-dim" style="text-decoration: line-through; opacity: 0.4;">[07] monitor 3 dashboards ........ ongoing</span></div>
+      <div>&nbsp;</div>
+      <div><span class="t-accent">$</span><span class="t-bright"> invariant build restaurant-finder</span></div>
+      <div><span class="t-accent">[resolve]</span><span class="t-dim"> geocoding → google maps ... $0.005/call</span></div>
+      <div><span class="t-accent">[resolve]</span><span class="t-dim"> reviews → yelp ........... $0.01/call</span></div>
+      <div><span class="t-accent">[resolve]</span><span class="t-dim"> llm → claude sonnet ...... $0.003/1k</span></div>
+      <div><span class="t-accent">[provision]</span><span class="t-dim"> 3 APIs provisioned in 0.8s</span></div>
+      <div><span class="t-accent">[done]</span><span class="t-bright"> total: $3.20 | balance: $46.80</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── layers ──────────────────────────────────────── -->
+<section id="layers">
+  <div class="section-inner reveal">
+    <div class="section-label">architecture</div>
+    <div class="section-num">002</div>
+    <h2 class="section-title">Three layers. One system.</h2>
+
+    <div class="layers-grid">
+      <div class="layer">
+        <div class="layer-num">I</div>
+        <div>
+          <div class="layer-name">Marketplace</div>
+          <div class="layer-desc">The supply engine. Developers sell unused API credits P2P at 85-95% face value. Stripe escrow. Creates the supply that powers everything above.</div>
+          <div class="layer-tags"><span>Anthropic</span><span>OpenAI</span><span>Google</span><span>Mistral</span></div>
+        </div>
+      </div>
+      <div class="layer">
+        <div class="layer-num">II</div>
+        <div>
+          <div class="layer-name">Gateway</div>
+          <div class="layer-desc">One endpoint, every API category. Picks best provider by price, latency, region. You call one endpoint. Routing is invisible.</div>
+          <div class="layer-tags"><span>AI</span><span>Maps</span><span>SMS</span><span>Email</span><span>Payments</span><span>Storage</span></div>
+        </div>
+      </div>
+      <div class="layer">
+        <div class="layer-num">III</div>
+        <div>
+          <div class="layer-name">Agents</div>
+          <div class="layer-desc">Agent says "build me a restaurant finder." Gateway resolves geocoding, reviews, LLM. Provisions access, pays from balance. You funded $50. It cost $3.20.</div>
+          <div class="layer-tags"><span>discover</span><span>provision</span><span>pay</span><span>build</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flywheel-line">
+      <span>marketplace</span> feeds supply &rarr; <span>gateway</span> consumes supply &rarr; <span>agents</span> drive demand &rarr; demand attracts sellers &rarr; cycle
+    </div>
+  </div>
+</section>
+
+<!-- ── demo ─────────────────────────────────────────── -->
+<section id="demo">
+  <div class="section-inner reveal">
+    <div class="section-label">sandbox</div>
+    <div class="section-num">003</div>
+    <h2 class="section-title">Try it.</h2>
+
+    <div class="demo-buttons">
+      <button class="demo-btn primary" onclick="runDemo('build a restaurant finder')">build a restaurant finder</button>
+      <button class="demo-btn primary" onclick="runDemo('build send an sms notification')">send an sms</button>
+      <button class="demo-btn primary" onclick="runDemo('build analyze 500 pdfs')">analyze 500 pdfs</button>
+      <button class="demo-btn primary" onclick="runDemo('build translate app to 12 languages')">translate to 12 languages</button>
+      <button class="demo-btn" onclick="runDemo('search anthropic')">search anthropic</button>
+      <button class="demo-btn" onclick="runDemo('balance')">balance</button>
+      <button class="demo-btn" onclick="runDemo('market')">market</button>
+    </div>
+
+    <div class="demo-terminal">
+      <div class="demo-output" id="demo-output">
+        <div class="line"><span class="line-dim">invariant sandbox &mdash; balance: $50.00</span></div>
+        <div class="line"><span class="line-dim">commands: build &lt;description&gt;, search &lt;provider&gt;, buy &lt;id&gt;, balance, market</span></div>
+        <div class="line">&nbsp;</div>
+      </div>
+      <div class="demo-bar">
+        <span>balance: <span class="bal" id="demo-balance">$50.00</span></span>
+        <span>listings: <span id="demo-listing-count">10</span></span>
+        <span>resolved: <span id="demo-resolve-count">0</span></span>
+      </div>
+      <div class="demo-input-row">
+        <span class="prompt-label">&gt;</span>
+        <input type="text" id="demo-input" placeholder="build a weather app" autocomplete="off" spellcheck="false">
+      </div>
+    </div>
+    <div class="demo-hint">simulated in-browser. nothing leaves this page.</div>
+  </div>
+</section>
+
+<!-- ── steps ────────────────────────────────────────── -->
+<section id="start">
+  <div class="section-inner reveal">
+    <div class="section-label">getting started</div>
+    <div class="section-num">004</div>
+    <h2 class="section-title">Three steps.</h2>
+    <div class="steps-list">
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <div><div class="step-title">Fund your balance</div><div class="step-desc">One Stripe checkout. Deposits USD into your Invariant balance.</div></div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <div><div class="step-title">Give your agent a key</div><div class="step-desc">Generate <code>inv_live_...</code> from the dashboard. Set permissions and rate limits.</div></div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">3</div>
+        <div><div class="step-title">Build</div><div class="step-desc">Your agent handles API discovery, provisioning, and payment. You describe what to build. It builds.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── api ──────────────────────────────────────────── -->
+<section id="api">
+  <div class="section-inner reveal">
+    <div class="section-label">api reference</div>
+    <div class="section-num">005</div>
+    <h2 class="section-title">Endpoints.</h2>
+    <table class="api-table">
+      <thead><tr><th style="width:60px">method</th><th>endpoint</th><th>description</th><th style="width:70px">auth</th></tr></thead>
+      <tbody>
+        <tr><td colspan="4" class="api-group">gateway</td></tr>
+        <tr><td><span class="method m-post">POST</span></td><td class="path">/v1/chat/completions</td><td class="desc">Unified AI model access</td><td class="auth">bearer</td></tr>
+        <tr><td><span class="method m-post">POST</span></td><td class="path">/v1/resolve</td><td class="desc">"I need geocoding" &rarr; best provider</td><td class="auth">bearer</td></tr>
+        <tr><td><span class="method m-post">POST</span></td><td class="path">/v1/provision</td><td class="desc">Provision access to a specific API</td><td class="auth">bearer</td></tr>
+        <tr><td colspan="4" class="api-group">marketplace</td></tr>
+        <tr><td><span class="method m-get">GET</span></td><td class="path">/api/agent/search</td><td class="desc">Find credits by provider, price</td><td class="auth">optional</td></tr>
+        <tr><td><span class="method m-get">GET</span></td><td class="path">/api/agent/market-data</td><td class="desc">Price aggregates per provider</td><td class="auth">none</td></tr>
+        <tr><td><span class="method m-post">POST</span></td><td class="path">/api/agent/buy</td><td class="desc">Instant purchase. Atomic settlement.</td><td class="auth">bearer</td></tr>
+        <tr><td><span class="method m-post">POST</span></td><td class="path">/api/agent/list</td><td class="desc">Create selling listing</td><td class="auth">bearer</td></tr>
+        <tr><td><span class="method m-get">GET</span></td><td class="path">/api/agent/balance</td><td class="desc">Current balance</td><td class="auth">bearer</td></tr>
+        <tr><td><span class="method m-post">POST</span></td><td class="path">/api/agent/deposit</td><td class="desc">Stripe Checkout session</td><td class="auth">bearer</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="corner-hash" id="corner-hash"></div>
+
+<footer>
+  <p>Invariant &mdash; the last API you'll ever need</p>
+  <div class="links">
+    <a href="/api/auth/github">sign in</a>
+    <a href="#api">docs</a>
+    <a href="#demo">demo</a>
+  </div>
+</footer>
+
+<div class="ticker">
+  <div class="ticker-inner" id="ticker"></div>
+</div>
+
+<script>
+// ── ticker ────────────────────────────────────────────
+const tickerWords = [
+  'one key', 'every api', 'zero dashboards', 'automatic routing', 'p2p credits',
+  'below retail pricing', 'stripe escrow', 'instant settlement', 'agent-native',
+  'the last api', 'fund once build anything', 'api procurement is dead',
+  'one endpoint', 'invisible routing', 'the invariant'
+];
+const tickerEl = document.getElementById('ticker');
+const tickerHTML = tickerWords.map(w => `<span>${w}</span> <span class="sep">/</span>`).join(' ');
+tickerEl.innerHTML = tickerHTML + ' ' + tickerHTML;
+
+const topWords = [
+  'the api layer that doesn\'t change', 'fund once, build anything', 'one balance for every api on earth',
+  'your agent\'s operating system', 'procurement is dead', 'the invariant layer',
+  'marketplace → gateway → agents → cycle', 'below retail, above expectation'
+];
+const topTickerEl = document.getElementById('ticker-top');
+const topHTML = topWords.map(w => `<span>${w}</span> <span class="sep">&mdash;</span>`).join(' ');
+topTickerEl.innerHTML = topHTML + ' ' + topHTML;
+
+// ── manifesto scroller ────────────────────────────────
+const manifestoEl = document.getElementById('manifesto');
+const mWords = [
+  { text: 'FUND ONCE.', cls: 'm-accent' },
+  { text: 'BUILD ANYTHING.', cls: 'm-accent' },
+  { text: 'ZERO SIGNUPS.', cls: 'm-hot' },
+  { text: 'ONE KEY.', cls: 'm-accent' },
+  { text: 'EVERY API.', cls: 'm-dim' },
+  { text: 'NO DASHBOARDS.', cls: 'm-hot' },
+  { text: '$3.20.', cls: 'm-accent' },
+  { text: 'INVARIANT.', cls: 'm-dim' },
+];
+const mHTML = mWords.map(w => `<span class="${w.cls}">${w.text}</span>`).join('');
+manifestoEl.innerHTML = mHTML + mHTML;
+
+// ── floating editorial words ──────────────────────────
+const floatContainer = document.getElementById('floating-words');
+const floatWords = [
+  { text: 'one key', size: '2.5rem', color: 'rgba(0,200,83,0.08)' },
+  { text: 'every api', size: '2rem', color: 'rgba(0,200,83,0.06)' },
+  { text: 'fund once', size: '1.8rem', color: 'rgba(123,104,238,0.06)' },
+  { text: 'build anything', size: '2.2rem', color: 'rgba(0,200,83,0.05)' },
+  { text: '$3.20', size: '3rem', color: 'rgba(0,200,83,0.07)' },
+  { text: 'zero dashboards', size: '1.5rem', color: 'rgba(232,56,79,0.05)' },
+  { text: 'invariant', size: '1.3rem', color: 'rgba(255,255,255,0.03)' },
+  { text: 'procurement is dead', size: '1.4rem', color: 'rgba(232,56,79,0.04)' },
+];
+
+function spawnFloatWord() {
+  const w = floatWords[Math.floor(Math.random() * floatWords.length)];
+  const el = document.createElement('div');
+  el.className = 'float-word';
+  el.textContent = w.text;
+  el.style.cssText = `font-size:${w.size};font-weight:500;color:${w.color};left:${Math.random()*75+5}%;top:${Math.random()*75+5}%;font-family:var(--serif);font-style:italic;`;
+  floatContainer.appendChild(el);
+  setTimeout(() => { el.style.transition='opacity 3s'; el.style.opacity='0'; setTimeout(()=>el.remove(),3000); }, 4000);
+}
+setInterval(spawnFloatWord, 2500);
+for (let i = 0; i < 3; i++) setTimeout(spawnFloatWord, i * 600);
+
+// ── shared state ──────────────────────────────────────
+let mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+let scrollY = 0;
+document.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; });
+window.addEventListener('scroll', () => { scrollY = window.scrollY; });
+
+// ── glyph grid ────────────────────────────────────────
+const glyphCanvas = document.getElementById('glyph-canvas');
+const glyphCtx = glyphCanvas.getContext('2d');
+const glyphs = ['∴','◊','⬡','△','○','◇','⊕','∞','≡','⌬','◉','⬢'];
+
+function resizeGlyph() { glyphCanvas.width = window.innerWidth; glyphCanvas.height = window.innerHeight; }
+resizeGlyph();
+
+function drawGlyphs() {
+  glyphCtx.clearRect(0, 0, glyphCanvas.width, glyphCanvas.height);
+  const size = 60;
+  const cols = Math.ceil(glyphCanvas.width / size) + 1;
+  const rows = Math.ceil(glyphCanvas.height / size) + 1;
+  const offsetY = (scrollY * 0.12) % size;
+  glyphCtx.font = '18px "IBM Plex Mono"';
+  glyphCtx.textAlign = 'center';
+  glyphCtx.textBaseline = 'middle';
+  for (let r = -1; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const x = c * size + size / 2;
+      const y = r * size + size / 2 + offsetY;
+      const dx = mouse.x - x, dy = mouse.y - y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const proximity = Math.max(0, 1 - dist / 200);
+      const opacity = 0.12 + proximity * 0.7;
+      const scale = 1 + proximity * 0.6;
+      const rotation = proximity * Math.sin(Date.now() * 0.002 + c + r) * 0.5;
+      const idx = (r * cols + c) % glyphs.length;
+      glyphCtx.save();
+      glyphCtx.translate(x, y);
+      glyphCtx.rotate(rotation);
+      glyphCtx.scale(scale, scale);
+      glyphCtx.fillStyle = proximity > 0.3 ? `rgba(0,200,83,${opacity})` : `rgba(100,100,105,${opacity})`;
+      glyphCtx.fillText(glyphs[idx], 0, 0);
+      glyphCtx.restore();
+    }
+  }
+}
+
+// ── coordinate grid + invariant curves ────────────────
+const canvas = document.getElementById('bg-canvas');
+const ctx = canvas.getContext('2d');
+let particles = [];
+
+function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+resizeCanvas();
+
+// origin at center of screen
+function getOrigin() { return { x: canvas.width / 2, y: canvas.height / 2 }; }
+
+function drawGrid() {
+  const o = getOrigin();
+  const gridSize = 80;
+
+  // minor grid lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.018)';
+  ctx.lineWidth = 0.5;
+  for (let x = o.x % gridSize; x < canvas.width; x += gridSize) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+  }
+  for (let y = o.y % gridSize; y < canvas.height; y += gridSize) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+  }
+
+  // axes
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, o.y); ctx.lineTo(canvas.width, o.y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(o.x, 0); ctx.lineTo(o.x, canvas.height); ctx.stroke();
+
+  // tick marks
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  for (let x = o.x % gridSize; x < canvas.width; x += gridSize) {
+    ctx.beginPath(); ctx.moveTo(x, o.y - 4); ctx.lineTo(x, o.y + 4); ctx.stroke();
+  }
+  for (let y = o.y % gridSize; y < canvas.height; y += gridSize) {
+    ctx.beginPath(); ctx.moveTo(o.x - 4, y); ctx.lineTo(o.x + 4, y); ctx.stroke();
+  }
+}
+
+// draw invariant curves — these are level sets that don't change under linear transformation
+// the "invariant" is the eigenspace: lines through origin preserved by a matrix
+function drawInvariantCurves(t) {
+  const o = getOrigin();
+  const maxR = Math.max(canvas.width, canvas.height);
+
+  // eigenspace lines (invariant subspaces) — these rotate slowly
+  const angles = [Math.PI/6, Math.PI/3, 2*Math.PI/3, 5*Math.PI/6];
+  angles.forEach((a, i) => {
+    const angle = a + Math.sin(t * 0.0003 + i) * 0.05; // barely moving — almost invariant
+    const dx = Math.cos(angle) * maxR;
+    const dy = Math.sin(angle) * maxR;
+    ctx.beginPath();
+    ctx.moveTo(o.x - dx, o.y - dy);
+    ctx.lineTo(o.x + dx, o.y + dy);
+    ctx.strokeStyle = `rgba(0,200,83,${0.03 + 0.01 * Math.sin(t * 0.001 + i)})`;
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+  });
+
+  // invariant ellipse (preserved quadratic form: x^2/a^2 + y^2/b^2 = const)
+  for (let k = 1; k <= 3; k++) {
+    const rx = k * 120 + Math.sin(t * 0.0005) * 8;
+    const ry = k * 90 + Math.cos(t * 0.0004) * 6;
+    ctx.beginPath();
+    ctx.ellipse(o.x, o.y, rx, ry, Math.sin(t * 0.0002) * 0.1, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(0,200,83,${0.025 - k * 0.005})`;
+    ctx.lineWidth = 0.6;
+    ctx.stroke();
+  }
+}
+
+class Particle {
+  constructor() { this.reset(); }
+  reset() {
+    this.x = Math.random() * canvas.width;
+    this.y = Math.random() * canvas.height;
+    this.size = Math.random() * 2 + 0.5;
+    this.speedX = (Math.random() - 0.5) * 0.3;
+    this.speedY = (Math.random() - 0.5) * 0.3;
+    this.opacity = Math.random() * 0.25 + 0.03;
+    this.pulse = Math.random() * Math.PI * 2;
+    this.color = Math.random() > 0.7 ? '0,200,83' : '80,80,88';
+  }
+  update() {
+    const dx = mouse.x - this.x, dy = mouse.y - this.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 350) this.opacity = Math.min(0.45, this.opacity + 0.006);
+    else this.opacity = Math.max(0.03, this.opacity - 0.003);
+    if (dist < 250) { const f = (1 - dist / 250) * 0.012; this.x += dx * f; this.y += dy * f; }
+    if (dist < 35) { this.x -= dx * 0.02; this.y -= dy * 0.02; }
+    this.x += this.speedX; this.y += this.speedY; this.pulse += 0.02;
+    if (this.x < 0 || this.x > canvas.width) this.speedX *= -1;
+    if (this.y < 0 || this.y > canvas.height) this.speedY *= -1;
+  }
+  draw() {
+    const s = this.size + Math.sin(this.pulse) * 0.4;
+    ctx.beginPath(); ctx.arc(this.x, this.y, s, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${this.color}, ${this.opacity})`;
+    ctx.fill();
+  }
+}
+
+for (let i = 0; i < 250; i++) particles.push(new Particle());
+
+function drawConnections() {
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i + 1; j < particles.length; j++) {
+      const dx = particles[i].x - particles[j].x, dy = particles[i].y - particles[j].y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 90) {
+        ctx.beginPath(); ctx.moveTo(particles[i].x, particles[i].y); ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.strokeStyle = `rgba(0,200,83, ${0.06 * (1 - dist / 90)})`; ctx.lineWidth = 0.5; ctx.stroke();
+      }
+    }
+  }
+  for (let i = 0; i < particles.length; i++) {
+    const dx = mouse.x - particles[i].x, dy = mouse.y - particles[i].y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 220) {
+      ctx.beginPath(); ctx.moveTo(mouse.x, mouse.y); ctx.lineTo(particles[i].x, particles[i].y);
+      ctx.strokeStyle = `rgba(0,200,83, ${0.12 * (1 - dist / 220)})`; ctx.lineWidth = 0.7; ctx.stroke();
+    }
+  }
+}
+
+// ── mouse trail ───────────────────────────────────────
+const trailCanvas = document.getElementById('trail-canvas');
+const trailCtx = trailCanvas.getContext('2d');
+let trail = [];
+
+function resizeTrail() { trailCanvas.width = window.innerWidth; trailCanvas.height = window.innerHeight; }
+resizeTrail();
+
+function drawTrail() {
+  trailCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
+  trail.push({ x: mouse.x, y: mouse.y, life: 1 });
+  if (trail.length > 40) trail.shift();
+  for (let i = 1; i < trail.length; i++) {
+    const t = trail[i];
+    t.life -= 0.025;
+    if (t.life <= 0) continue;
+    const size = t.life * 4;
+    trailCtx.beginPath(); trailCtx.arc(t.x, t.y, size, 0, Math.PI * 2);
+    trailCtx.fillStyle = `rgba(0,200,83, ${t.life * 0.08})`;
+    trailCtx.fill();
+    if (i > 0 && trail[i-1].life > 0) {
+      trailCtx.beginPath(); trailCtx.moveTo(trail[i-1].x, trail[i-1].y); trailCtx.lineTo(t.x, t.y);
+      trailCtx.strokeStyle = `rgba(0,200,83, ${t.life * 0.05})`; trailCtx.lineWidth = t.life * 2; trailCtx.stroke();
+    }
+  }
+  trail = trail.filter(t => t.life > 0);
+}
+
+// ── resize ────────────────────────────────────────────
+window.addEventListener('resize', () => { resizeCanvas(); resizeGlyph(); resizeTrail(); });
+
+// ── animate ───────────────────────────────────────────
+function animate() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawGrid();
+  drawInvariantCurves(Date.now());
+  particles.forEach(p => { p.update(); p.draw(); });
+  drawConnections();
+  drawGlyphs();
+  drawTrail();
+  requestAnimationFrame(animate);
+}
+animate();
+
+// ── text scramble ─────────────────────────────────────
+const scrambleChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&';
+function scrambleText(el) {
+  const original = el.getAttribute('data-text') || el.textContent;
+  el.setAttribute('data-text', original);
+  let iteration = 0;
+  const interval = setInterval(() => {
+    el.textContent = original.split('').map((char, i) => {
+      if (i < iteration) return original[i];
+      if (char === ' ') return ' ';
+      return scrambleChars[Math.floor(Math.random() * scrambleChars.length)];
+    }).join('');
+    iteration += 0.8;
+    if (iteration >= original.length) { el.textContent = original; clearInterval(interval); }
+  }, 25);
+}
+
+// ── scroll reveals ────────────────────────────────────
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+      const title = e.target.querySelector('.section-title');
+      if (title) scrambleText(title);
+    }
+  });
+}, { threshold: 0.05 });
+document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+// fallback: if reveals haven't fired after 2s, force them visible
+setTimeout(() => {
+  document.querySelectorAll('.reveal:not(.visible)').forEach(el => el.classList.add('fallback'));
+}, 2000);
+
+// ── corner hash ───────────────────────────────────────
+const hashEl = document.getElementById('corner-hash');
+function updateHash() {
+  const chars = '0123456789abcdef';
+  let h = '0x';
+  for (let i = 0; i < 8; i++) h += chars[Math.floor(Math.random() * 16)];
+  hashEl.textContent = h;
+}
+updateHash(); setInterval(updateHash, 3000);
+
+// ── nav status cycle ──────────────────────────────────
+const statuses = ['systems nominal','gateway online','10 listings active','api routing live','marketplace synced','below retail pricing'];
+let statusIdx = 0;
+const statusEl = document.querySelector('.nav-status');
+setInterval(() => {
+  statusIdx = (statusIdx + 1) % statuses.length;
+  statusEl.childNodes[statusEl.childNodes.length - 1].textContent = ' ' + statuses[statusIdx];
+}, 4000);
+
+// ── parallax bg-text ──────────────────────────────────
+const bgText = document.querySelector('.bg-text');
+window.addEventListener('scroll', () => {
+  const y = window.scrollY;
+  bgText.style.transform = `translate(-50%, calc(-50% + ${y * 0.15}px))`;
+  bgText.style.opacity = Math.max(0, 1 - y / 1500);
+});
+
+// ── demo state + commands ─────────────────────────────
+const state = {
+  balance: 5000, resolveCount: 0,
+  listings: [
+    { id:'a8f3c1e9',provider:'Anthropic',title:'Claude API credits',askingPrice:4500,faceValue:5000,creditType:'API key',autoMatch:true,seller:'devhacker42' },
+    { id:'d92e4b17',provider:'Anthropic',title:'Anthropic org credits',askingPrice:1850,faceValue:2000,creditType:'org invite',autoMatch:true,seller:'ml_researcher' },
+    { id:'f1a7e3c2',provider:'Anthropic',title:'Sonnet batch credits',askingPrice:8500,faceValue:10000,creditType:'API key',autoMatch:true,seller:'buildfast_io' },
+    { id:'b4c8d2a1',provider:'Anthropic',title:'Haiku credits bundle',askingPrice:750,faceValue:1000,creditType:'redemption code',autoMatch:true,seller:'hackathon_winner' },
+    { id:'e5f9a3b7',provider:'OpenAI',title:'GPT-4o API credits',askingPrice:2800,faceValue:3000,creditType:'API key',autoMatch:true,seller:'gpt_surplus' },
+    { id:'c7d1e4f6',provider:'OpenAI',title:'OpenAI org credits',askingPrice:9200,faceValue:10000,creditType:'org invite',autoMatch:false,seller:'ai_startup_dev' },
+    { id:'3a6b9c2d',provider:'OpenAI',title:'Whisper + GPT bundle',askingPrice:1400,faceValue:1500,creditType:'API key',autoMatch:true,seller:'audioml_lab' },
+    { id:'8e2f5a1c',provider:'Google',title:'Gemini API credits',askingPrice:3200,faceValue:4000,creditType:'API key',autoMatch:true,seller:'cloud_native' },
+    { id:'6d4c7b3e',provider:'Google',title:'Vertex AI credits',askingPrice:6800,faceValue:7500,creditType:'account login',autoMatch:true,seller:'gcp_reseller' },
+    { id:'1f9e8d7c',provider:'Mistral',title:'Mistral Large credits',askingPrice:1200,faceValue:1500,creditType:'API key',autoMatch:true,seller:'eu_dev_paris' },
+  ],
+  transactions: [],
+};
+
+const buildScenarios = {
+  'restaurant finder': { description:'restaurant finder app', apis:[{name:'Google Maps Geocoding',category:'geocoding',cost:0.005,unit:'call',calls:200,provider:'Google'},{name:'Yelp Fusion',category:'reviews',cost:0.01,unit:'call',calls:150,provider:'Yelp'},{name:'Claude Sonnet',category:'LLM',cost:0.003,unit:'1k tokens',calls:300,provider:'Anthropic'}] },
+  'sms notification': { description:'SMS notification service', apis:[{name:'Twilio SMS',category:'messaging',cost:0.0079,unit:'message',calls:1,provider:'Twilio'}] },
+  'analyze 500 pdfs': { description:'PDF analysis pipeline (500 docs)', apis:[{name:'Claude Sonnet',category:'LLM extraction',cost:0.003,unit:'1k tokens',calls:5000,provider:'Anthropic'},{name:'AWS S3',category:'storage',cost:0.023,unit:'GB/month',calls:2,provider:'AWS'}] },
+  'translate app to 12 languages': { description:'app localization (12 languages)', apis:[{name:'DeepL API',category:'translation',cost:0.00002,unit:'character',calls:600000,provider:'DeepL'}] },
+  'weather app': { description:'weather dashboard', apis:[{name:'OpenWeatherMap',category:'weather',cost:0.001,unit:'call',calls:500,provider:'OpenWeather'},{name:'Google Maps Geocoding',category:'location',cost:0.005,unit:'call',calls:100,provider:'Google'},{name:'Claude Haiku',category:'LLM',cost:0.00025,unit:'1k tokens',calls:500,provider:'Anthropic'}] },
+  'e-commerce store': { description:'e-commerce platform', apis:[{name:'Stripe Payments',category:'payments',cost:0.029,unit:'transaction',calls:100,provider:'Stripe'},{name:'SendGrid',category:'email',cost:0.001,unit:'email',calls:500,provider:'Twilio'},{name:'Claude Sonnet',category:'descriptions',cost:0.003,unit:'1k tokens',calls:200,provider:'Anthropic'},{name:'Cloudinary',category:'images',cost:0.002,unit:'transform',calls:1000,provider:'Cloudinary'}] },
+  'chatbot': { description:'support chatbot', apis:[{name:'Claude Sonnet',category:'LLM',cost:0.003,unit:'1k tokens',calls:10000,provider:'Anthropic'},{name:'Pinecone',category:'vector search',cost:0.0001,unit:'query',calls:10000,provider:'Pinecone'}] },
+};
+
+function cents(n){return '$'+(n/100).toFixed(2)}
+function shortId(){return Math.random().toString(16).slice(2,8)}
+const output=document.getElementById('demo-output');
+const input=document.getElementById('demo-input');
+function updateStateBar(){document.getElementById('demo-balance').textContent=cents(state.balance);document.getElementById('demo-listing-count').textContent=state.listings.length;document.getElementById('demo-resolve-count').textContent=state.resolveCount;}
+function appendLine(h){const d=document.createElement('div');d.className='line';d.innerHTML=h;output.appendChild(d);output.scrollTop=output.scrollHeight;}
+function appendPrompt(c){appendLine('<span class="line-prompt">&gt;</span> <span class="line-cmd">'+escHtml(c)+'</span>')}
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function jsonLine(k,v,i,l){const c=l?'':',';if(v===null)return pad(i)+'<span class="line-key">"'+k+'"</span>: <span class="line-null">null</span>'+c;if(typeof v==='number')return pad(i)+'<span class="line-key">"'+k+'"</span>: <span class="line-num">'+v+'</span>'+c;if(typeof v==='boolean')return pad(i)+'<span class="line-key">"'+k+'"</span>: <span class="line-num">'+v+'</span>'+c;return pad(i)+'<span class="line-key">"'+k+'"</span>: <span class="line-str">"'+escHtml(String(v))+'"</span>'+c}
+function pad(n){return '  '.repeat(n)}
+function renderResponse(d){if(Array.isArray(d)){appendLine('[');d.forEach((item,i)=>{const keys=Object.keys(item);appendLine(pad(1)+'{');keys.forEach((k,j)=>appendLine(jsonLine(k,item[k],2,j===keys.length-1)));appendLine(pad(1)+'}'+(i<d.length-1?',':''))});appendLine(']')}else{appendLine('{');const keys=Object.keys(d);keys.forEach((k,i)=>appendLine(jsonLine(k,d[k],1,i===keys.length-1)));appendLine('}')}appendLine('')}
+
+function cmdBuild(desc){if(!desc){appendLine('<span class="line-err">usage: build &lt;description&gt;</span>');appendLine('');return}const d=desc.toLowerCase();let s=null;for(const[k,v]of Object.entries(buildScenarios)){if(d.includes(k)||k.includes(d.replace(/^(a |an |the )/,''))){s=v;break}}if(!s){if(d.includes('restaurant')||d.includes('food'))s=buildScenarios['restaurant finder'];else if(d.includes('sms')||d.includes('notification'))s=buildScenarios['sms notification'];else if(d.includes('pdf')||d.includes('analyz'))s=buildScenarios['analyze 500 pdfs'];else if(d.includes('translat')||d.includes('language'))s=buildScenarios['translate app to 12 languages'];else if(d.includes('weather'))s=buildScenarios['weather app'];else if(d.includes('shop')||d.includes('store')||d.includes('commerce'))s=buildScenarios['e-commerce store'];else if(d.includes('chat')||d.includes('bot'))s=buildScenarios['chatbot']}if(!s)s={description:desc,apis:[{name:'Claude Sonnet',category:'LLM',cost:0.003,unit:'1k tokens',calls:1000,provider:'Anthropic'},{name:'Custom API',category:'domain',cost:0.01,unit:'call',calls:200,provider:'Various'}]};appendLine('<span class="line-dim">resolving: '+escHtml(s.description)+'</span>');appendLine('');let total=0;s.apis.forEach((a,i)=>{const c=a.cost*a.calls;total+=c;state.resolveCount++;appendLine('  <span class="line-dim">['+(i+1)+']</span> <span class="line-cmd">'+escHtml(a.name)+'</span>');appendLine('      <span class="line-dim">category</span>  <span class="line-str">'+escHtml(a.category)+'</span>');appendLine('      <span class="line-dim">provider</span>  <span class="line-amber">'+escHtml(a.provider)+'</span>');appendLine('      <span class="line-dim">rate</span>      <span class="line-num">$'+a.cost+'/'+escHtml(a.unit)+'</span>');appendLine('      <span class="line-dim">est</span>       <span class="line-num">'+a.calls.toLocaleString()+' '+escHtml(a.unit)+'s</span>');appendLine('      <span class="line-dim">subtotal</span>  <span class="line-num">$'+c.toFixed(2)+'</span>');appendLine('')});const tc=Math.round(total*100);appendLine('  <span class="line-dim">──────────────────────</span>');appendLine('  <span class="line-dim">total</span>  <span class="line-success">$'+total.toFixed(2)+'</span>');if(state.balance>=tc){state.balance-=tc;updateStateBar();appendLine('  <span class="line-dim">debit</span>  <span class="line-success">-$'+total.toFixed(2)+'</span>');appendLine('  <span class="line-dim">remaining</span>  <span class="line-success">'+cents(state.balance)+'</span>');appendLine('');appendLine('  <span class="line-success">provisioned. ready to build.</span>')}else{appendLine('  <span class="line-dim">balance</span>  <span class="line-err">'+cents(state.balance)+'</span>');appendLine('');appendLine('  <span class="line-err">insufficient. need $'+((tc-state.balance)/100).toFixed(2)+' more.</span>')}appendLine('')}
+
+function cmdSearch(p){const q=(p||'').toLowerCase();const r=state.listings.filter(l=>!q||l.provider.toLowerCase()===q);if(!r.length){appendLine('<span class="line-dim">no listings'+(q?' for '+q:'')+'</span>');appendLine('');return}renderResponse(r.map(l=>({id:l.id,provider:l.provider,title:l.title,askingPrice:l.askingPrice,faceValue:l.faceValue,creditType:l.creditType,autoMatch:l.autoMatch,seller:l.seller})))}
+function cmdMarket(){const p={};state.listings.forEach(l=>{if(!p[l.provider])p[l.provider]={prices:[],count:0};p[l.provider].prices.push(l.askingPrice);p[l.provider].count++});const d=Object.entries(p).map(([n,d])=>({provider:n,listings:d.count,minPrice:Math.min(...d.prices),maxPrice:Math.max(...d.prices),avgPrice:Math.round(d.prices.reduce((a,b)=>a+b,0)/d.prices.length)}));if(!d.length){appendLine('<span class="line-dim">no listings</span>');appendLine('');return}renderResponse(d)}
+function cmdBuy(id){let l;if(!id||id==='cheapest'){l=state.listings.filter(x=>x.autoMatch).sort((a,b)=>a.askingPrice-b.askingPrice)[0]}else{l=state.listings.find(x=>x.id.startsWith(id))}if(!l){appendLine('<span class="line-err">not found</span>');appendLine('');return}if(!l.autoMatch){appendLine('<span class="line-err">auto_match: false</span>');appendLine('');return}if(state.balance<l.askingPrice){renderResponse({error:'insufficient',required:l.askingPrice,available:state.balance});return}const f=Math.round(l.askingPrice*0.07);const po=l.askingPrice-f;const tx=shortId();state.balance-=l.askingPrice;state.listings=state.listings.filter(x=>x.id!==l.id);state.transactions.push({id:tx,listing:l.title,provider:l.provider,amountCents:l.askingPrice,feeCents:f,status:'paid',seller:l.seller,time:new Date().toISOString()});updateStateBar();renderResponse({transactionId:tx,listing:l.title,provider:l.provider,amountCents:l.askingPrice,platformFeeCents:f,sellerPayoutCents:po,status:'paid',newBalance:state.balance})}
+function cmdBalance(){renderResponse({balanceCents:state.balance,formatted:cents(state.balance)})}
+function cmdList(p,fv,ap){if(!p||!fv||!ap){appendLine('<span class="line-err">usage: list &lt;provider&gt; &lt;face&gt; &lt;price&gt;</span>');appendLine('');return}const id=shortId()+shortId().slice(0,2);const l={id,provider:p.charAt(0).toUpperCase()+p.slice(1),title:p.charAt(0).toUpperCase()+p.slice(1)+' credits',askingPrice:Number(ap),faceValue:Number(fv),creditType:'API key',autoMatch:true,seller:'you'};state.listings.push(l);updateStateBar();renderResponse({id:l.id,provider:l.provider,askingPrice:l.askingPrice,faceValue:l.faceValue,autoMatch:true,status:'active'})}
+function cmdStatus(){if(!state.transactions.length){appendLine('<span class="line-dim">no transactions</span>');appendLine('');return}renderResponse(state.transactions)}
+
+function processCommand(raw){const t=raw.trim();if(!t)return;appendPrompt(t);const l=t.toLowerCase();const p=l.split(/\s+/);const c=p[0];if(c==='build'||l.startsWith('build ')){cmdBuild(t.slice(6).trim())}else if(c==='search'){cmdSearch(p[1])}else if(c==='market'){cmdMarket()}else if(c==='buy'){cmdBuy(p[1])}else if(c==='balance'){cmdBalance()}else if(c==='list'){cmdList(p[1],p[2],p[3])}else if(c==='status'){cmdStatus()}else if(c==='help'){appendLine('<span class="line-dim">  build &lt;desc&gt;     resolve APIs, show cost</span>');appendLine('<span class="line-dim">  search &lt;provider&gt; marketplace listings</span>');appendLine('<span class="line-dim">  buy &lt;id&gt;         purchase listing</span>');appendLine('<span class="line-dim">  balance          check balance</span>');appendLine('<span class="line-dim">  market           price data</span>');appendLine('<span class="line-dim">  list &lt;p&gt; &lt;f&gt; &lt;a&gt; create listing</span>');appendLine('<span class="line-dim">  clear            clear</span>');appendLine('')}else if(c==='clear'){output.innerHTML=''}else{appendLine('<span class="line-dim">&rarr; build '+escHtml(t)+'</span>');appendLine('');cmdBuild(t)}}
+
+input.addEventListener('keydown',(e)=>{if(e.key==='Enter'){processCommand(input.value);input.value=''}});
+function runDemo(cmd){input.value='';processCommand(cmd);input.focus()}
+document.querySelector('.demo-terminal').addEventListener('click',()=>input.focus());
+</script>
 </body>
 </html>

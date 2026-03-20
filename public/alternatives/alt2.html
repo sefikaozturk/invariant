@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>invariant — terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=IBM+Plex+Mono:wght@300;400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #0e0e10;
+  --surface: #131315;
+  --border: #2a2a2e;
+  --text: #c8c8cc;
+  --text-dim: #6a6a70;
+  --text-bright: #f0f0f2;
+  --accent: #00c853;
+  --accent-dim: rgba(0, 200, 83, 0.08);
+  --accent-bright: #00ff6a;
+  --hot: #e8384f;
+  --mono: 'IBM Plex Mono', monospace;
+  --serif: 'Playfair Display', Georgia, serif;
+  --sans: 'Inter', -apple-system, sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── the whole page is a terminal ── */
+.terminal-chrome {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  max-width: 900px;
+  width: 100%;
+  margin: 24px auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.terminal-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.02);
+  border-bottom: 1px solid var(--border);
+}
+.terminal-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+}
+.terminal-dot.r { background: var(--hot); }
+.terminal-dot.y { background: #f5a623; }
+.terminal-dot.g { background: var(--accent); }
+.terminal-title {
+  flex: 1;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.terminal-body {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.line { margin-bottom: 2px; }
+.line.prompt { color: var(--accent); }
+.line.system { color: var(--text-dim); font-style: italic; }
+.line.output { color: var(--text); }
+.line.highlight { color: var(--accent-bright); }
+.line.error { color: var(--hot); }
+.line.heading {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 18px;
+  color: var(--text-bright);
+  margin: 12px 0 8px;
+}
+.line .dim { color: var(--text-dim); }
+.line .green { color: var(--accent); }
+.line .bright { color: var(--text-bright); }
+
+.line-group { margin: 16px 0; }
+.line-group .line { margin-bottom: 0; }
+
+.input-area {
+  display: flex;
+  align-items: center;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  background: rgba(255,255,255,0.01);
+}
+.input-prompt {
+  color: var(--accent);
+  margin-right: 8px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.input-field {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--text-bright);
+  font-family: var(--mono);
+  font-size: 14px;
+  outline: none;
+  caret-color: var(--accent);
+}
+.input-field::placeholder { color: var(--text-dim); }
+
+/* ── choices ── */
+.choices {
+  display: flex;
+  gap: 12px;
+  margin: 16px 0;
+  flex-wrap: wrap;
+}
+.choice-btn {
+  background: var(--accent-dim);
+  border: 1px solid rgba(0, 200, 83, 0.2);
+  border-radius: 6px;
+  padding: 10px 20px;
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.choice-btn:hover {
+  background: rgba(0, 200, 83, 0.15);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+/* ── install block ── */
+.install-block {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin: 16px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.install-block code {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--accent-bright);
+}
+.install-copy {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  padding: 6px 16px;
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 12px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+.install-copy:hover { background: var(--accent-bright); }
+
+/* typing animation */
+.typing::after {
+  content: '█';
+  animation: blink 0.8s step-end infinite;
+  color: var(--accent);
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* fade in */
+.fadein {
+  opacity: 0;
+  transform: translateY(4px);
+  animation: fadeUp 0.4s ease forwards;
+}
+@keyframes fadeUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── link back ── */
+.back-link {
+  text-align: center;
+  padding: 16px;
+}
+.back-link a {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-dim);
+  text-decoration: none;
+}
+.back-link a:hover { color: var(--accent); }
+
+@media (max-width: 768px) {
+  .terminal-chrome { margin: 12px; border-radius: 8px; }
+  .terminal-body { padding: 16px; font-size: 13px; }
+  .input-area { padding: 12px 16px; }
+  .choices { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+
+<div class="terminal-chrome">
+  <div class="terminal-titlebar">
+    <div class="terminal-dot r"></div>
+    <div class="terminal-dot y"></div>
+    <div class="terminal-dot g"></div>
+    <div class="terminal-title">invariant — session</div>
+  </div>
+
+  <div class="terminal-body" id="output">
+    <!-- content injected by JS -->
+  </div>
+
+  <div class="input-area" id="inputArea" style="display: none;">
+    <span class="input-prompt">→</span>
+    <input type="text" class="input-field" id="inputField" placeholder="describe what you want to build..." autofocus>
+  </div>
+</div>
+
+<div class="back-link"><a href="../index.html">← full site</a></div>
+
+<script>
+const output = document.getElementById('output');
+const inputArea = document.getElementById('inputArea');
+const inputField = document.getElementById('inputField');
+
+let state = 'intro';
+const delay = (ms) => new Promise(r => setTimeout(r, ms));
+
+function addLine(html, cls = '', groupDelay = 0) {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      const div = document.createElement('div');
+      div.className = `line fadein ${cls}`;
+      div.innerHTML = html;
+      output.appendChild(div);
+      output.scrollTop = output.scrollHeight;
+      resolve();
+    }, groupDelay);
+  });
+}
+
+function addChoices(options) {
+  const wrap = document.createElement('div');
+  wrap.className = 'choices fadein';
+  options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.textContent = opt.label;
+    btn.onclick = () => {
+      wrap.remove();
+      opt.action();
+    };
+    wrap.appendChild(btn);
+  });
+  output.appendChild(wrap);
+  output.scrollTop = output.scrollHeight;
+}
+
+function addInstall(cmd) {
+  const wrap = document.createElement('div');
+  wrap.className = 'install-block fadein';
+  wrap.innerHTML = `<code>${cmd}</code><button class="install-copy" onclick="navigator.clipboard.writeText('${cmd}');this.textContent='copied!'">copy</button>`;
+  output.appendChild(wrap);
+  output.scrollTop = output.scrollHeight;
+}
+
+function showInput(placeholder) {
+  inputField.placeholder = placeholder || 'type here...';
+  inputArea.style.display = 'flex';
+  inputField.focus();
+  inputField.value = '';
+}
+function hideInput() { inputArea.style.display = 'none'; }
+
+// ── intro sequence ──
+async function intro() {
+  await delay(400);
+  await addLine('invariant', 'heading');
+  await delay(200);
+  await addLine('<span class="dim">the last API you\'ll ever need.</span>', 'system');
+  await delay(600);
+  await addLine('');
+  await addLine('you\'re still doing this by hand:', '', 300);
+  await delay(400);
+  await addLine('<span class="dim">  → research providers</span>', '', 100);
+  await addLine('<span class="dim">  → compare pricing</span>', '', 200);
+  await addLine('<span class="dim">  → sign up for each one</span>', '', 300);
+  await addLine('<span class="dim">  → enter payment details</span>', '', 400);
+  await addLine('<span class="dim">  → read their docs</span>', '', 500);
+  await addLine('<span class="dim">  → integrate</span>', '', 600);
+  await addLine('<span class="dim">  → manage keys</span>', '', 700);
+  await addLine('<span class="dim">  → monitor usage</span>', '', 800);
+  await delay(1200);
+  await addLine('');
+  await addLine('<span class="bright">or: you tell us what you\'re building and we handle all of it.</span>', '', 200);
+  await delay(800);
+  await addLine('');
+  await addLine('what brings you here?', '', 200);
+  await delay(300);
+
+  addChoices([
+    { label: 'i want cheap API credits', action: () => flowMarketplace() },
+    { label: 'i want one key for every API', action: () => flowGateway() },
+    { label: 'i want my agent to handle everything', action: () => flowAgent() },
+    { label: 'just show me how it works', action: () => flowDemo() },
+  ]);
+}
+
+// ── marketplace flow ──
+async function flowMarketplace() {
+  await addLine('');
+  await addLine('<span class="green">→ i want cheap API credits</span>', 'prompt');
+  await delay(400);
+  await addLine('');
+  await addLine('the marketplace.', 'heading');
+  await addLine('<span class="dim">developers sell unused API credits. you buy at 85–95% off retail.</span>');
+  await addLine('<span class="dim">Stripe escrow on every transaction. instant transfer.</span>', '', 200);
+  await delay(400);
+  await addLine('');
+  await addLine('<span class="bright">right now available:</span>', '', 200);
+  await addLine('  Anthropic Claude — 12 listings from $0.84/100K tokens', '', 400);
+  await addLine('  OpenAI GPT-4 — 8 listings from $2.10/100K tokens', '', 500);
+  await addLine('  Google Gemini — 5 listings from $0.32/100K tokens', '', 600);
+  await addLine('  Mistral Large — 3 listings from $0.90/100K tokens', '', 700);
+  await delay(600);
+  await addLine('');
+  await addLine('get started:', '', 200);
+  addInstall('npm install -g invariant-cli && invariant login');
+  await delay(200);
+  await addLine('<span class="dim">then: invariant search anthropic</span>', '', 300);
+  await addLine('<span class="dim">then: invariant buy &lt;listing-id&gt;</span>', '', 400);
+  await delay(400);
+  await addLine('');
+  addChoices([
+    { label: 'show me the gateway too', action: () => flowGateway() },
+    { label: 'show me agents too', action: () => flowAgent() },
+    { label: 'i\'m sold — let me start', action: () => flowStart() },
+  ]);
+}
+
+// ── gateway flow ──
+async function flowGateway() {
+  await addLine('');
+  await addLine('<span class="green">→ one key, every API</span>', 'prompt');
+  await delay(400);
+  await addLine('');
+  await addLine('the gateway.', 'heading');
+  await addLine('<span class="dim">one API key. one endpoint. we route to the best provider.</span>');
+  await delay(300);
+  await addLine('');
+  await addLine('<span class="bright">what it replaces:</span>', '', 200);
+  await addLine('  <span class="dim" style="text-decoration:line-through;color:var(--hot)">5 API signups</span>  →  <span class="green">1 key</span>', '', 400);
+  await addLine('  <span class="dim" style="text-decoration:line-through;color:var(--hot)">5 billing dashboards</span>  →  <span class="green">1 balance</span>', '', 500);
+  await addLine('  <span class="dim" style="text-decoration:line-through;color:var(--hot)">5 sets of docs</span>  →  <span class="green">1 endpoint</span>', '', 600);
+  await addLine('  <span class="dim" style="text-decoration:line-through;color:var(--hot)">5 integration patterns</span>  →  <span class="green">1 SDK</span>', '', 700);
+  await delay(600);
+  await addLine('');
+  await addLine('<span class="bright">supported categories:</span>', '', 200);
+  await addLine('  AI models · maps · SMS · email · payments · storage · search · translation', '', 400);
+  await delay(400);
+  await addLine('');
+  await addLine('<span class="bright">one call:</span>', '', 200);
+  await addLine('  <span class="green">POST</span> /v1/chat/completions  — unified AI (OpenAI-compatible)', '', 400);
+  await addLine('  <span class="green">POST</span> /v1/resolve           — "i need geocoding" → best provider', '', 500);
+  await addLine('  <span class="green">POST</span> /v1/provision          — instant access to any API', '', 600);
+  await delay(400);
+  await addLine('');
+  addInstall('npm install invariant-sdk');
+  await delay(200);
+  await addLine('');
+  addChoices([
+    { label: 'show me agents', action: () => flowAgent() },
+    { label: 'i\'m sold — let me start', action: () => flowStart() },
+  ]);
+}
+
+// ── agent flow ──
+async function flowAgent() {
+  await addLine('');
+  await addLine('<span class="green">→ let the agent handle everything</span>', 'prompt');
+  await delay(400);
+  await addLine('');
+  await addLine('the agent layer.', 'heading');
+  await addLine('<span class="dim">your agent says what to build. we handle API discovery, provisioning, payment.</span>');
+  await delay(400);
+  await addLine('');
+  await addLine('<span class="bright">watch:</span>', '', 200);
+  await delay(300);
+  await addLine('  <span class="dim">agent:</span> "build a restaurant finder for downtown SF"', '', 200);
+  await delay(600);
+  await addLine('  <span class="green">resolving...</span>', '', 200);
+  await delay(400);
+  await addLine('  ✓ geocoding → Google Maps · $0.005/call', '', 200);
+  await delay(200);
+  await addLine('  ✓ reviews → Yelp Fusion · $0.01/call', '', 200);
+  await delay(200);
+  await addLine('  ✓ reasoning → Claude Sonnet · $0.003/1K tokens', '', 200);
+  await delay(400);
+  await addLine('  <span class="bright">estimated cost: $3.20</span>', '', 200);
+  await delay(200);
+  await addLine('  <span class="green">provisioned. building...</span>', '', 200);
+  await delay(600);
+  await addLine('  <span class="green">✓ restaurant-finder.py — complete.</span>', 'highlight', 200);
+  await delay(600);
+  await addLine('');
+  await addLine('<span class="dim">you funded $50. it used $3.20. $46.80 remains for the next thing.</span>', '', 200);
+  await delay(400);
+  await addLine('');
+  await addLine('try it yourself:', '', 200);
+  showInput('describe what you want to build...');
+  state = 'build';
+}
+
+// ── build command ──
+async function handleBuild(query) {
+  hideInput();
+  await addLine(`<span class="green">→ build: ${query}</span>`, 'prompt');
+  await delay(500);
+  await addLine('<span class="green">analyzing requirements...</span>', '', 200);
+  await delay(800);
+
+  // generate plausible APIs based on keywords
+  const apis = resolveAPIs(query);
+  let total = 0;
+  for (let i = 0; i < apis.length; i++) {
+    await delay(300);
+    await addLine(`  ✓ ${apis[i].need} → ${apis[i].provider} · ${apis[i].price}`, '', 100);
+    total += apis[i].cost;
+  }
+  await delay(400);
+  await addLine(`  <span class="bright">estimated cost: $${total.toFixed(2)}</span>`, '', 200);
+  await delay(300);
+  await addLine(`  <span class="green">✓ ready to provision and build.</span>`, 'highlight', 200);
+  await delay(400);
+  await addLine('');
+  addChoices([
+    { label: 'try another build', action: () => { showInput('describe what you want to build...'); state = 'build'; } },
+    { label: 'i\'m sold — get started', action: () => flowStart() },
+  ]);
+}
+
+function resolveAPIs(query) {
+  const q = query.toLowerCase();
+  const apis = [];
+
+  if (q.includes('restaurant') || q.includes('food') || q.includes('place') || q.includes('location') || q.includes('map') || q.includes('near')) {
+    apis.push({ need: 'geocoding', provider: 'Google Maps', price: '$0.005/call', cost: 0.50 });
+    apis.push({ need: 'places/reviews', provider: 'Yelp Fusion', price: '$0.01/call', cost: 1.20 });
+  }
+  if (q.includes('weather') || q.includes('forecast') || q.includes('temperature')) {
+    apis.push({ need: 'weather data', provider: 'OpenWeatherMap', price: '$0.001/call', cost: 0.40 });
+  }
+  if (q.includes('sms') || q.includes('text') || q.includes('notification') || q.includes('alert')) {
+    apis.push({ need: 'SMS delivery', provider: 'Twilio', price: '$0.0075/msg', cost: 0.75 });
+  }
+  if (q.includes('email') || q.includes('mail') || q.includes('newsletter')) {
+    apis.push({ need: 'email delivery', provider: 'Resend', price: '$0.001/email', cost: 0.30 });
+  }
+  if (q.includes('translate') || q.includes('language') || q.includes('localize')) {
+    apis.push({ need: 'translation', provider: 'DeepL', price: '$0.02/1K chars', cost: 2.40 });
+  }
+  if (q.includes('pdf') || q.includes('document') || q.includes('extract') || q.includes('parse')) {
+    apis.push({ need: 'document parsing', provider: 'Claude Vision', price: '$0.004/page', cost: 2.00 });
+    apis.push({ need: 'storage', provider: 'AWS S3', price: '$0.023/GB', cost: 0.46 });
+  }
+  if (q.includes('image') || q.includes('photo') || q.includes('generate') || q.includes('art')) {
+    apis.push({ need: 'image generation', provider: 'DALL-E 3', price: '$0.04/image', cost: 1.60 });
+  }
+  if (q.includes('search') || q.includes('find') || q.includes('look up') || q.includes('scrape')) {
+    apis.push({ need: 'web search', provider: 'Serper', price: '$0.001/query', cost: 0.50 });
+  }
+  if (q.includes('pay') || q.includes('checkout') || q.includes('billing') || q.includes('subscription')) {
+    apis.push({ need: 'payments', provider: 'Stripe', price: '2.9% + $0.30', cost: 0.30 });
+  }
+
+  // always add an LLM
+  apis.push({ need: 'reasoning/orchestration', provider: 'Claude Sonnet', price: '$0.003/1K tokens', cost: 1.50 });
+
+  return apis;
+}
+
+// ── start flow ──
+async function flowStart() {
+  await addLine('');
+  await addLine('let\'s go.', 'heading');
+  await delay(300);
+  await addLine('');
+  await addLine('<span class="bright">step 1 — install</span>', '', 200);
+  addInstall('npm install -g invariant-cli');
+  await delay(200);
+  await addLine('');
+  await addLine('<span class="bright">step 2 — login & fund</span>', '', 200);
+  addInstall('invariant login && invariant fund 50');
+  await delay(200);
+  await addLine('');
+  await addLine('<span class="bright">step 3 — build anything</span>', '', 200);
+  addInstall('invariant build "a weather dashboard for my city"');
+  await delay(400);
+  await addLine('');
+  await addLine('<span class="dim">docs: <a href="#" style="color:var(--accent)">docs.invariant.dev</a> · github: <a href="#" style="color:var(--accent)">github.com/invariant</a></span>', '', 200);
+  await delay(200);
+  await addLine('');
+  await addLine('<span class="green">you\'re ready. go build something.</span>', 'highlight', 200);
+}
+
+// ── demo flow ──
+async function flowDemo() {
+  await addLine('');
+  await addLine('<span class="green">→ show me how it works</span>', 'prompt');
+  await delay(400);
+  await addLine('');
+  await addLine('here\'s the full picture.', 'heading');
+  await delay(300);
+  await addLine('');
+  await addLine('<span class="bright">layer 1 — marketplace</span> <span class="dim">(supply)</span>', '', 200);
+  await addLine('  developers sell unused API credits at a discount.', '', 300);
+  await addLine('  you buy below retail. Stripe escrow. instant.', '', 400);
+  await delay(300);
+  await addLine('');
+  await addLine('<span class="bright">layer 2 — gateway</span> <span class="dim">(routing)</span>', '', 200);
+  await addLine('  one API key. one endpoint. every provider.', '', 300);
+  await addLine('  we pick the best for your use case: cost, speed, or region.', '', 400);
+  await delay(300);
+  await addLine('');
+  await addLine('<span class="bright">layer 3 — agents</span> <span class="dim">(automation)</span>', '', 200);
+  await addLine('  say "build X." agent discovers APIs, provisions, builds.', '', 300);
+  await addLine('  you fund once. agent handles everything else.', '', 400);
+  await delay(300);
+  await addLine('');
+  await addLine('<span class="dim">they feed each other: marketplace → supply → gateway → routing → agents → demand → marketplace</span>', '', 200);
+  await delay(600);
+  await addLine('');
+  await addLine('try it:', '', 200);
+  showInput('describe what you want to build...');
+  state = 'build';
+}
+
+// ── input handler ──
+inputField.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && inputField.value.trim()) {
+    const val = inputField.value.trim();
+    inputField.value = '';
+    if (state === 'build') {
+      handleBuild(val);
+    }
+  }
+});
+
+// boot
+intro();
+</script>
+
+</body>
+</html>

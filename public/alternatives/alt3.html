@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>invariant — start building</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=IBM+Plex+Mono:wght@300;400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #0e0e10;
+  --surface: #161618;
+  --border: #2a2a2e;
+  --text: #c8c8cc;
+  --text-dim: #6a6a70;
+  --text-bright: #f0f0f2;
+  --accent: #00c853;
+  --accent-dim: rgba(0, 200, 83, 0.08);
+  --accent-bright: #00ff6a;
+  --hot: #e8384f;
+  --mono: 'IBM Plex Mono', monospace;
+  --serif: 'Playfair Display', Georgia, serif;
+  --sans: 'Inter', -apple-system, sans-serif;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* ── nav ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: 52px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 32px;
+  background: rgba(14, 14, 16, 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  z-index: 100;
+}
+nav .logo {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 18px;
+  color: var(--text-bright);
+}
+nav .logo span { color: var(--accent); }
+nav .nav-links { display: flex; gap: 24px; align-items: center; }
+nav a {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+nav a:hover { color: var(--accent); }
+nav .nav-cta {
+  background: var(--accent);
+  color: var(--bg);
+  padding: 6px 16px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+nav .nav-cta:hover { background: var(--accent-bright); color: var(--bg); }
+
+/* ── hero: the speed run ── */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 52px 24px 0;
+}
+.hero-inner {
+  max-width: 1080px;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  align-items: center;
+}
+
+.hero-left h1 {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: clamp(32px, 5vw, 52px);
+  font-weight: 400;
+  color: var(--text-bright);
+  line-height: 1.15;
+  margin-bottom: 20px;
+}
+.hero-left h1 .time {
+  color: var(--accent);
+  display: block;
+  font-size: 0.65em;
+  font-family: var(--mono);
+  font-style: normal;
+  margin-top: 8px;
+}
+.hero-left p {
+  font-size: 15px;
+  color: var(--text-dim);
+  line-height: 1.7;
+  margin-bottom: 24px;
+  max-width: 420px;
+}
+.hero-left .trust-line {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* ── the onboarding widget ── */
+.onboard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.onboard-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.onboard-header h2 {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-bright);
+}
+.step-indicators {
+  display: flex;
+  gap: 6px;
+}
+.step-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: all 0.3s;
+}
+.step-dot.active { background: var(--accent); box-shadow: 0 0 8px rgba(0, 200, 83, 0.4); }
+.step-dot.done { background: var(--accent); opacity: 0.5; }
+
+.onboard-body {
+  padding: 28px 24px;
+  min-height: 340px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* step 1: what do you need */
+.step { display: none; flex-direction: column; flex: 1; }
+.step.active { display: flex; }
+
+.step-title {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 20px;
+  color: var(--text-bright);
+  margin-bottom: 6px;
+}
+.step-sub {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 20px;
+}
+
+/* checkboxes for APIs */
+.api-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex: 1;
+}
+.api-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 13px;
+}
+.api-option:hover {
+  border-color: rgba(0, 200, 83, 0.3);
+}
+.api-option.selected {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+.api-option .check {
+  width: 16px; height: 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.api-option.selected .check {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.api-option.selected .check::after {
+  content: '✓';
+  font-size: 11px;
+  color: var(--bg);
+  font-weight: 700;
+}
+.api-option .api-name {
+  color: var(--text-bright);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.api-option .api-detail {
+  color: var(--text-dim);
+  font-size: 11px;
+  margin-left: auto;
+}
+
+/* step 2: cost estimate */
+.cost-breakdown {
+  flex: 1;
+  margin-bottom: 20px;
+}
+.cost-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 13px;
+}
+.cost-row .cost-label {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text);
+}
+.cost-row .cost-price {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--accent);
+}
+.cost-total {
+  display: flex;
+  justify-content: space-between;
+  padding: 16px 0 0;
+  font-family: var(--mono);
+  font-size: 14px;
+}
+.cost-total .cost-label { color: var(--text-bright); font-weight: 500; }
+.cost-total .cost-price { color: var(--accent-bright); font-weight: 500; }
+
+.vs-retail {
+  margin-top: 12px;
+  padding: 12px 16px;
+  background: var(--accent-dim);
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--accent);
+  text-align: center;
+}
+
+/* step 3: get started */
+.final-steps {
+  flex: 1;
+}
+.final-step {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+  align-items: flex-start;
+}
+.final-step-num {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--accent-dim);
+  border: 1px solid rgba(0,200,83,0.2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.final-step-content h3 {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text-bright);
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+.final-step-content p {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+.cmd-block {
+  margin-top: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--accent-bright);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.cmd-copy {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 11px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.cmd-copy:hover { color: var(--accent); }
+
+/* nav buttons */
+.onboard-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.btn-back {
+  background: none;
+  border: none;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 8px 16px;
+  transition: color 0.2s;
+}
+.btn-back:hover { color: var(--text-bright); }
+.btn-back.hidden { visibility: hidden; }
+.btn-next {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 24px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-next:hover { background: var(--accent-bright); transform: translateY(-1px); }
+.btn-next:disabled {
+  background: var(--border);
+  color: var(--text-dim);
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ── what you get section ── */
+.features {
+  padding: 120px 24px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+.features h2 {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: clamp(24px, 4vw, 36px);
+  color: var(--text-bright);
+  font-weight: 400;
+  text-align: center;
+  margin-bottom: 56px;
+}
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+.feature-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 28px 24px;
+  transition: border-color 0.3s;
+}
+.feature-card:hover { border-color: rgba(0, 200, 83, 0.2); }
+.feature-card .fc-tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+.feature-card h3 {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 18px;
+  color: var(--text-bright);
+  font-weight: 400;
+  margin-bottom: 10px;
+}
+.feature-card p {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+/* ── social proof strip ── */
+.proof {
+  padding: 48px 24px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.proof-nums {
+  display: flex;
+  justify-content: center;
+  gap: 64px;
+}
+.proof-num {
+  text-align: center;
+}
+.proof-num .big {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 36px;
+  color: var(--accent);
+}
+.proof-num .label {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 4px;
+}
+
+/* ── final cta ── */
+.final-cta {
+  padding: 120px 24px;
+  text-align: center;
+}
+.final-cta h2 {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: clamp(28px, 5vw, 48px);
+  color: var(--text-bright);
+  font-weight: 400;
+  margin-bottom: 20px;
+}
+.final-cta p {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 28px;
+}
+.final-cta .install-cmd {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 28px;
+}
+.final-cta .install-cmd code {
+  font-family: var(--mono);
+  font-size: 15px;
+  color: var(--accent-bright);
+}
+.final-cta .install-cmd button {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  padding: 6px 16px;
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.final-cta .install-cmd button:hover { background: var(--accent-bright); }
+
+/* ── footer ── */
+footer {
+  padding: 24px 32px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+footer .f-left {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--text-dim);
+}
+footer .f-right {
+  display: flex; gap: 24px;
+}
+footer .f-right a {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  text-decoration: none;
+}
+footer .f-right a:hover { color: var(--accent); }
+
+/* ── responsive ── */
+@media (max-width: 768px) {
+  .hero-inner { grid-template-columns: 1fr; gap: 32px; }
+  .hero-left { text-align: center; }
+  .hero-left p { margin: 0 auto 24px; }
+  .api-grid { grid-template-columns: 1fr; }
+  .feature-grid { grid-template-columns: 1fr; }
+  .proof-nums { flex-direction: column; gap: 24px; }
+  nav { padding: 0 16px; }
+  .nav-links a:not(.nav-cta) { display: none; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo"><span>invariant</span></div>
+  <div class="nav-links">
+    <a href="../index.html">full site</a>
+    <a href="#features">features</a>
+    <a href="#" class="nav-cta">get started</a>
+  </div>
+</nav>
+
+<!-- ── hero ── -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-left">
+      <h1>
+        every API.<br>one key.
+        <span class="time">ready in 30 seconds.</span>
+      </h1>
+      <p>pick what you need. see what it costs. start building. the entire onboarding flow is right here — no signup forms, no sales calls.</p>
+      <div class="trust-line">Stripe-secured · 40+ API providers · marketplace discounts up to 95%</div>
+    </div>
+
+    <!-- ── the onboarding widget ── -->
+    <div class="onboard">
+      <div class="onboard-header">
+        <h2>quick start</h2>
+        <div class="step-indicators">
+          <div class="step-dot active" data-step="1"></div>
+          <div class="step-dot" data-step="2"></div>
+          <div class="step-dot" data-step="3"></div>
+        </div>
+      </div>
+
+      <div class="onboard-body">
+        <!-- step 1 -->
+        <div class="step active" data-step="1">
+          <div class="step-title">what APIs do you need?</div>
+          <div class="step-sub">select all that apply. you can always add more later.</div>
+          <div class="api-grid">
+            <div class="api-option" data-api="ai" data-cost="4.20" data-retail="6.00" onclick="toggleAPI(this)">
+              <div class="check"></div>
+              <div>
+                <div class="api-name">AI models</div>
+                <div class="api-detail">Claude, GPT, Gemini</div>
+              </div>
+            </div>
+            <div class="api-option" data-api="maps" data-cost="1.80" data-retail="2.50" onclick="toggleAPI(this)">
+              <div class="check"></div>
+              <div>
+                <div class="api-name">maps & geocoding</div>
+                <div class="api-detail">Google Maps, Mapbox</div>
+              </div>
+            </div>
+            <div class="api-option" data-api="sms" data-cost="2.10" data-retail="3.00" onclick="toggleAPI(this)">
+              <div class="check"></div>
+              <div>
+                <div class="api-name">SMS & messaging</div>
+                <div class="api-detail">Twilio, MessageBird</div>
+              </div>
+            </div>
+            <div class="api-option" data-api="email" data-cost="0.90" data-retail="1.20" onclick="toggleAPI(this)">
+              <div class="check"></div>
+              <div>
+                <div class="api-name">email</div>
+                <div class="api-detail">Resend, SendGrid</div>
+              </div>
+            </div>
+            <div class="api-option" data-api="payments" data-cost="1.50" data-retail="2.00" onclick="toggleAPI(this)">
+              <div class="check"></div>
+              <div>
+                <div class="api-name">payments</div>
+                <div class="api-detail">Stripe</div>
+              </div>
+            </div>
+            <div class="api-option" data-api="storage" data-cost="0.60" data-retail="0.80" onclick="toggleAPI(this)">
+              <div class="check"></div>
+              <div>
+                <div class="api-name">storage</div>
+                <div class="api-detail">S3, Cloudflare R2</div>
+              </div>
+            </div>
+            <div class="api-option" data-api="search" data-cost="1.20" data-retail="1.80" onclick="toggleAPI(this)">
+              <div class="check"></div>
+              <div>
+                <div class="api-name">web search</div>
+                <div class="api-detail">Serper, Brave</div>
+              </div>
+            </div>
+            <div class="api-option" data-api="translate" data-cost="2.40" data-retail="3.50" onclick="toggleAPI(this)">
+              <div class="check"></div>
+              <div>
+                <div class="api-name">translation</div>
+                <div class="api-detail">DeepL, Google</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- step 2 -->
+        <div class="step" data-step="2">
+          <div class="step-title">your cost estimate</div>
+          <div class="step-sub">marketplace pricing vs. signing up individually.</div>
+          <div class="cost-breakdown" id="costBreakdown">
+            <!-- filled by JS -->
+          </div>
+        </div>
+
+        <!-- step 3 -->
+        <div class="step" data-step="3">
+          <div class="step-title">start building</div>
+          <div class="step-sub">three commands. that's it.</div>
+          <div class="final-steps">
+            <div class="final-step">
+              <div class="final-step-num">1</div>
+              <div class="final-step-content">
+                <h3>install the CLI</h3>
+                <div class="cmd-block">
+                  <span>npm install -g invariant-cli</span>
+                  <button class="cmd-copy" onclick="navigator.clipboard.writeText('npm install -g invariant-cli');this.textContent='✓'">copy</button>
+                </div>
+              </div>
+            </div>
+            <div class="final-step">
+              <div class="final-step-num">2</div>
+              <div class="final-step-content">
+                <h3>login & fund your balance</h3>
+                <p>Stripe checkout. $10 minimum. use marketplace credits or pay retail.</p>
+                <div class="cmd-block">
+                  <span>invariant login && invariant fund</span>
+                  <button class="cmd-copy" onclick="navigator.clipboard.writeText('invariant login && invariant fund');this.textContent='✓'">copy</button>
+                </div>
+              </div>
+            </div>
+            <div class="final-step">
+              <div class="final-step-num">3</div>
+              <div class="final-step-content">
+                <h3>use it</h3>
+                <p>CLI, SDK, or give your agent the API key. everything routes through one endpoint.</p>
+                <div class="cmd-block">
+                  <span>invariant build "a weather dashboard"</span>
+                  <button class="cmd-copy" onclick="navigator.clipboard.writeText('invariant build \"a weather dashboard\"');this.textContent='✓'">copy</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="onboard-footer">
+        <button class="btn-back hidden" id="btnBack" onclick="prevStep()">← back</button>
+        <button class="btn-next" id="btnNext" onclick="nextStep()" disabled>select at least one →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── features ── -->
+<section class="features" id="features">
+  <h2>what you're actually getting</h2>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="fc-tag">marketplace</div>
+      <h3>below-retail credits</h3>
+      <p>other developers sell unused API credits at 85–95% of face value. Stripe escrow on every transaction. buy what you need, sell what you don't.</p>
+    </div>
+    <div class="feature-card">
+      <div class="fc-tag">gateway</div>
+      <h3>intelligent routing</h3>
+      <p>one endpoint picks the best provider for each call — by cost, latency, or region. OpenAI-compatible format. zero integration changes when you switch.</p>
+    </div>
+    <div class="feature-card">
+      <div class="fc-tag">agents</div>
+      <h3>autonomous provisioning</h3>
+      <p>your agent says "build X." the gateway discovers what APIs are needed, provisions access, handles payment. you funded once — it does the rest.</p>
+    </div>
+    <div class="feature-card">
+      <div class="fc-tag">infra</div>
+      <h3>one key, 40+ providers</h3>
+      <p>AI models, maps, SMS, email, payments, storage, search, translation. every major provider. one API key. one balance. one dashboard.</p>
+    </div>
+    <div class="feature-card">
+      <div class="fc-tag">pricing</div>
+      <h3>pay only for what you use</h3>
+      <p>no subscriptions. no minimums. fund your balance, use APIs, see per-call cost. marketplace credits make it even cheaper.</p>
+    </div>
+    <div class="feature-card">
+      <div class="fc-tag">dx</div>
+      <h3>OpenAI-compatible</h3>
+      <p>if your code works with OpenAI's SDK, it works with Invariant. change the base URL and API key. that's the migration.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── proof ── -->
+<section class="proof">
+  <div class="proof-nums">
+    <div class="proof-num">
+      <div class="big">40+</div>
+      <div class="label">API providers</div>
+    </div>
+    <div class="proof-num">
+      <div class="big">87%</div>
+      <div class="label">avg. discount</div>
+    </div>
+    <div class="proof-num">
+      <div class="big">&lt;30s</div>
+      <div class="label">time to first call</div>
+    </div>
+    <div class="proof-num">
+      <div class="big">$0</div>
+      <div class="label">platform fee</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── final cta ── -->
+<section class="final-cta">
+  <h2>stop managing APIs.<br>start building.</h2>
+  <p>one command to start. one balance for everything.</p>
+  <div class="install-cmd">
+    <code>npm install -g invariant-cli</code>
+    <button onclick="navigator.clipboard.writeText('npm install -g invariant-cli');this.textContent='copied!'">copy</button>
+  </div>
+</section>
+
+<footer>
+  <div class="f-left">invariant</div>
+  <div class="f-right">
+    <a href="#">docs</a>
+    <a href="#">github</a>
+    <a href="#">discord</a>
+    <a href="../index.html">full site</a>
+  </div>
+</footer>
+
+<script>
+// ── onboarding widget logic ──
+let currentStep = 1;
+const selected = new Set();
+
+function toggleAPI(el) {
+  const api = el.dataset.api;
+  el.classList.toggle('selected');
+  if (selected.has(api)) selected.delete(api);
+  else selected.add(api);
+  updateNextBtn();
+}
+
+function updateNextBtn() {
+  const btn = document.getElementById('btnNext');
+  if (currentStep === 1) {
+    btn.disabled = selected.size === 0;
+    btn.textContent = selected.size === 0 ? 'select at least one →' : `see pricing (${selected.size} selected) →`;
+  } else if (currentStep === 2) {
+    btn.textContent = 'get started →';
+    btn.disabled = false;
+  } else {
+    btn.textContent = 'open docs →';
+    btn.disabled = false;
+  }
+}
+
+function nextStep() {
+  if (currentStep === 3) {
+    window.open('#', '_blank');
+    return;
+  }
+  currentStep++;
+  if (currentStep === 2) buildCostBreakdown();
+  renderStep();
+}
+
+function prevStep() {
+  if (currentStep === 1) return;
+  currentStep--;
+  renderStep();
+}
+
+function renderStep() {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.querySelector(`.step[data-step="${currentStep}"]`).classList.add('active');
+
+  document.querySelectorAll('.step-dot').forEach(d => {
+    const s = parseInt(d.dataset.step);
+    d.classList.toggle('active', s === currentStep);
+    d.classList.toggle('done', s < currentStep);
+  });
+
+  const back = document.getElementById('btnBack');
+  back.classList.toggle('hidden', currentStep === 1);
+  updateNextBtn();
+}
+
+function buildCostBreakdown() {
+  const container = document.getElementById('costBreakdown');
+  container.innerHTML = '';
+  let totalCost = 0;
+  let totalRetail = 0;
+
+  const names = {
+    ai: 'AI models (Claude, GPT, Gemini)',
+    maps: 'Maps & geocoding',
+    sms: 'SMS & messaging',
+    email: 'Email delivery',
+    payments: 'Payment processing',
+    storage: 'Object storage',
+    search: 'Web search',
+    translate: 'Translation'
+  };
+
+  document.querySelectorAll('.api-option.selected').forEach(el => {
+    const api = el.dataset.api;
+    const cost = parseFloat(el.dataset.cost);
+    const retail = parseFloat(el.dataset.retail);
+    totalCost += cost;
+    totalRetail += retail;
+
+    const row = document.createElement('div');
+    row.className = 'cost-row';
+    row.innerHTML = `
+      <span class="cost-label">${names[api]}</span>
+      <span class="cost-price">~$${cost.toFixed(2)}/mo <span style="color:var(--text-dim);text-decoration:line-through;font-size:11px">$${retail.toFixed(2)}</span></span>
+    `;
+    container.appendChild(row);
+  });
+
+  const total = document.createElement('div');
+  total.className = 'cost-total';
+  total.innerHTML = `
+    <span class="cost-label">estimated monthly</span>
+    <span class="cost-price">~$${totalCost.toFixed(2)}/mo</span>
+  `;
+  container.appendChild(total);
+
+  const savings = ((1 - totalCost / totalRetail) * 100).toFixed(0);
+  const vs = document.createElement('div');
+  vs.className = 'vs-retail';
+  vs.textContent = `${savings}% cheaper than signing up for each API individually`;
+  container.appendChild(vs);
+}
+
+renderStep();
+</script>
+
+</body>
+</html>
