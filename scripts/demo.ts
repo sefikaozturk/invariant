@@ -1,8 +1,12 @@
 /**
- * Invariant Agent API Demo
+ * Invariant Demo
  *
- * Runs end-to-end: seeds demo data, creates an agent key,
- * searches listings, reads market data, and executes an instant buy.
+ * Shows the full product: an agent building a project tells Invariant
+ * what APIs it needs. Invariant provisions them automatically —
+ * sourcing from the marketplace when discounted credits exist,
+ * falling back to direct provisioning from the provider at retail.
+ *
+ * Any provider in the world. One endpoint.
  *
  * Usage:
  *   npm run demo
@@ -11,203 +15,240 @@
 
 const BASE = process.env.BASE_URL ?? 'http://localhost:3001';
 
-// ── ANSI helpers ────────────────────────────────────────────────────────────
+// ── ANSI ──────────────────────────────────────────────────────────────────────
 const c = {
-  reset: '\x1b[0m',
-  bold: '\x1b[1m',
-  dim: '\x1b[2m',
-  green: '\x1b[32m',
-  cyan: '\x1b[36m',
-  yellow: '\x1b[33m',
-  magenta: '\x1b[35m',
-  red: '\x1b[31m',
-  white: '\x1b[37m',
-  gray: '\x1b[90m',
+  reset: '\x1b[0m', bold: '\x1b[1m', dim: '\x1b[2m',
+  green: '\x1b[32m', cyan: '\x1b[36m', yellow: '\x1b[33m',
+  magenta: '\x1b[35m', red: '\x1b[31m', white: '\x1b[37m', gray: '\x1b[90m',
 };
 
-const fmt = {
-  header: (s: string) => `\n${c.bold}${c.cyan}${s}${c.reset}`,
-  step: (n: number, s: string) => `\n${c.bold}${c.white}[${n}]${c.reset} ${s}`,
-  label: (s: string) => `${c.gray}${s}${c.reset}`,
-  value: (s: unknown) => `${c.green}${s}${c.reset}`,
-  key: (s: string) => `${c.yellow}${c.bold}${s}${c.reset}`,
-  money: (cents: number) => `${c.green}$${(cents / 100).toFixed(2)}${c.reset}`,
-  error: (s: string) => `${c.red}✗ ${s}${c.reset}`,
-  ok: (s: string) => `${c.green}✓ ${s}${c.reset}`,
-  divider: () => `${c.gray}${'─'.repeat(60)}${c.reset}`,
-};
+const ok  = (s: string) => console.log(`  ${c.green}✓${c.reset} ${s}`);
+const inf = (l: string, v: string) => console.log(`  ${c.gray}${l.padEnd(20)}${c.reset}${v}`);
+const hdr = (s: string) => { console.log(); console.log(`${c.bold}${c.cyan}${s}${c.reset}`); console.log(); };
+const div = () => console.log(`${c.gray}${'─'.repeat(64)}${c.reset}`);
+const $   = (n: number) => `${c.green}$${(n / 100).toFixed(2)}${c.reset}`;
+const tag = (s: string) => `${c.yellow}${c.bold}${s}${c.reset}`;
+const nl  = () => console.log();
 
-function printJson(obj: unknown) {
-  const lines = JSON.stringify(obj, null, 2).split('\n');
-  for (const line of lines) {
-    console.log(`  ${c.dim}${line}${c.reset}`);
-  }
-}
-
-// ── HTTP helpers ─────────────────────────────────────────────────────────────
+// ── HTTP ──────────────────────────────────────────────────────────────────────
 async function api(
-  method: string,
-  path: string,
-  opts: { body?: unknown; jwt?: string; agentKey?: string } = {}
+  method: string, path: string,
+  opts: { body?: unknown; jwt?: string; agentKey?: string } = {},
 ) {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (opts.jwt) headers['Cookie'] = `token=${opts.jwt}`;
   if (opts.agentKey) headers['Authorization'] = `Bearer ${opts.agentKey}`;
-
   const res = await fetch(`${BASE}${path}`, {
-    method,
-    headers,
+    method, headers,
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
-
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(`${res.status} ${res.statusText}: ${JSON.stringify(data)}`);
-  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(`${method} ${path} → ${res.status}: ${JSON.stringify(data)}`);
   return data;
 }
 
-// ── Demo ─────────────────────────────────────────────────────────────────────
+// ── Main ──────────────────────────────────────────────────────────────────────
 async function run() {
-  console.log(fmt.header('━━━  Invariant Agent API Demo  ━━━'));
-  console.log(`${fmt.label('  Target:')} ${BASE}`);
-  console.log(fmt.divider());
+  nl();
+  console.log(`${c.bold}${c.cyan}  Invariant${c.reset}  ${c.dim}— provision any API, for any agent${c.reset}`);
+  console.log(`  ${c.gray}${BASE}${c.reset}`);
+  div();
 
-  // ── Step 1: Seed demo environment ──────────────────────────────────────────
-  console.log(fmt.step(1, 'Seeding demo environment...'));
+  // ── Scenario ──────────────────────────────────────────────────────────────
+  nl();
+  console.log(`${c.bold}  The scenario:${c.reset}`);
+  nl();
+  console.log(`  ${c.dim}You tell your coding agent:${c.reset}`);
+  console.log(`  ${c.white}${c.bold}"Build me a RAG chatbot. Use OpenAI for embeddings,`);
+  console.log(`   Anthropic for inference, Pinecone for vectors, Resend`);
+  console.log(`   for email notifications, and deploy it on Vercel."${c.reset}`);
+  nl();
+  console.log(`  ${c.dim}That's 5 API providers. Normally: 5 sign-up flows, 5 billing`);
+  console.log(`  pages, 5 sets of keys to copy-paste. With Invariant: one call.${c.reset}`);
+  nl();
+  div();
+
+  // ── Phase 1: Seed ─────────────────────────────────────────────────────────
+  hdr('Phase 1  —  Seed the marketplace');
+  console.log(`  ${c.dim}(Simulates a marketplace where sellers have listed unused credits)${c.reset}`);
+  nl();
   const setup = await api('POST', '/api/demo/setup');
-  console.log(fmt.ok(`Buyer: ${setup.buyer.username}  (balance: ${fmt.money(setup.buyer.balanceCents)})`));
-  console.log(fmt.ok(`Seller: ${setup.seller.username}`));
-  if (setup.listingsSeeded > 0) {
-    console.log(fmt.ok(`Created ${setup.listingsSeeded} seed listings`));
-  } else {
-    console.log(`  ${fmt.label('Listings already exist — skipping seed')}`);
-  }
+  ok(`Marketplace ready  (${setup.listingsSeeded > 0 ? `${setup.listingsSeeded} listings` : 'already seeded'})`);
+  ok(`Agent wallet: ${$(setup.buyer.balanceCents)}`);
+  const jwt = setup.token;
 
-  const jwt = setup.token as string;
+  // ── Phase 2: Agent key ────────────────────────────────────────────────────
+  hdr('Phase 2  —  Agent registers with Invariant');
+  console.log(`  ${c.dim}One-time setup. The agent stores this key in its config.${c.reset}`);
+  nl();
 
-  // ── Step 2: Create agent key ────────────────────────────────────────────────
-  console.log(fmt.step(2, 'Creating agent API key...'));
   const keyRes = await api('POST', '/api/agent-keys', {
     jwt,
-    body: {
-      name: 'demo-agent-v1',
-      displayName: 'Demo Agent',
-      framework: 'custom',
-      permissions: ['listings:read', 'escrow:create', 'escrow:read', 'balance:read', 'balance:write'],
-    },
+    body: { name: 'rag-builder', displayName: 'RAG Chatbot Builder', framework: 'claude-code' },
   });
+  const agentKey: string = keyRes.key;
+  ok('Agent key issued');
+  inf('Key:', tag(agentKey));
+  inf('Rate limit:', `${keyRes.rateLimit} req/min`);
 
-  const agentKey = keyRes.key as string;
-  console.log(fmt.ok('Agent key created'));
-  console.log(`  ${fmt.label('Name:')}        ${keyRes.name}`);
-  console.log(`  ${fmt.label('Key:')}         ${fmt.key(agentKey)}`);
-  console.log(`  ${fmt.label('Permissions:')} ${keyRes.permissions.join(', ')}`);
-  console.log(`  ${fmt.label('Rate limit:')}  ${keyRes.rateLimit} req/min`);
+  // ── Phase 3: Check the registry ───────────────────────────────────────────
+  hdr('Phase 3  —  What Invariant knows about');
+  const registry = await api('GET', '/api/provision/providers');
+  ok(`${registry.count} providers in the registry (AI, cloud, comms, data, auth, ...)`);
+  nl();
 
-  // ── Step 3: Market overview ─────────────────────────────────────────────────
-  console.log(fmt.step(3, 'Fetching market data...'));
-  const market = await api('GET', '/api/agent/market-data', { agentKey });
-  console.log(fmt.ok(`${market.length} providers with active listings`));
-  console.log();
+  // Group by category
+  const byCategory: Record<string, string[]> = {};
+  for (const p of registry.providers) {
+    (byCategory[p.category] ??= []).push(p.name);
+  }
+  for (const [cat, names] of Object.entries(byCategory)) {
+    console.log(`  ${c.cyan}${cat.padEnd(12)}${c.reset}${c.dim}${names.join(', ')}${c.reset}`);
+  }
+  nl();
+  console.log(`  ${c.dim}Unknown providers are accepted too — best-effort provisioning.${c.reset}`);
 
-  const providerCol = 14;
-  console.log(
-    `  ${c.bold}${'Provider'.padEnd(providerCol)}  Listings  Min Price    Avg Price    Max Price${c.reset}`
-  );
-  console.log(`  ${'─'.repeat(60)}`);
-  for (const row of market) {
-    const name = String(row.provider).padEnd(providerCol);
-    const count = String(row.count).padStart(4);
-    const min = `$${(row.minPrice / 100).toFixed(2)}`.padStart(8);
-    const avg = `$${(row.avgPrice / 100).toFixed(2)}`.padStart(8);
-    const max = `$${(row.maxPrice / 100).toFixed(2)}`.padStart(8);
-    console.log(`  ${c.cyan}${name}${c.reset}  ${count}      ${c.green}${min}${c.reset}       ${avg}       ${max}`);
+  // ── Phase 4: Provision ────────────────────────────────────────────────────
+  hdr('Phase 4  —  Agent provisions everything it needs');
+
+  const requirements = [
+    // These exist on the marketplace → sourced at a discount
+    { provider: 'OpenAI',    creditType: 'api' },
+    { provider: 'Anthropic', creditType: 'api' },
+    { provider: 'Vercel' },
+    // These don't have marketplace listings → direct provisioning
+    { provider: 'Pinecone' },
+    { provider: 'Resend' },
+  ];
+
+  console.log(`  ${c.dim}POST /api/provision${c.reset}`);
+  console.log(`  ${c.gray}{ "requirements": [${c.reset}`);
+  for (const r of requirements) {
+    const parts = [`"provider": "${r.provider}"`];
+    if ('creditType' in r) parts.push(`"creditType": "${r.creditType}"`);
+    console.log(`  ${c.gray}    { ${parts.join(', ')} },${c.reset}`);
+  }
+  console.log(`  ${c.gray}] }${c.reset}`);
+  nl();
+
+  const provision = await api('POST', '/api/provision', { agentKey, body: { requirements } });
+
+  // ── Print results ─────────────────────────────────────────────────────────
+  const statusColors: Record<string, string> = {
+    fulfilled: `${c.green}${c.bold}FULFILLED${c.reset}`,
+    partial: `${c.yellow}${c.bold}PARTIAL${c.reset}`,
+    unavailable: `${c.red}${c.bold}UNAVAILABLE${c.reset}`,
+  };
+
+  console.log(`  Status:  ${statusColors[provision.status] ?? provision.status}`);
+  inf('From marketplace:', `${provision.sourced}`);
+  inf('Direct provision:', `${provision.directProvisioning}`);
+  inf('Total spent:', $(provision.totalSpentCents));
+  if (provision.totalSavedCents > 0) {
+    inf('Saved vs retail:', `${$(provision.totalSavedCents)}  ${c.dim}(by using marketplace)${c.reset}`);
+  }
+  nl();
+  div();
+
+  for (const r of provision.results) {
+    nl();
+    const sourceTag = r.source === 'marketplace'
+      ? `${c.green}marketplace${c.reset}`
+      : `${c.magenta}direct${c.reset}`;
+    const statusIcon = r.status === 'sourced'
+      ? `${c.green}✓${c.reset}`
+      : r.status === 'provisioning'
+        ? `${c.magenta}⟳${c.reset}`
+        : `${c.yellow}✗${c.reset}`;
+
+    console.log(`  ${statusIcon}  ${c.bold}${r.providerInfo.name}${c.reset}  ${c.dim}via${c.reset} ${sourceTag}  ${c.dim}(${r.providerInfo.category})${c.reset}`);
+
+    if (r.status === 'sourced' && r.listing && r.transaction) {
+      inf('  Listing:', r.listing.title);
+      inf('  Paid:', $(r.transaction.amountCents));
+      if (r.savings) {
+        inf('  Retail would be:', $(r.savings.retailPriceCents));
+        inf('  You saved:', `${$(r.savings.savedCents)}  ${c.yellow}(${r.savings.savingsPct}% off)${c.reset}`);
+      }
+      inf('  Tx ID:', `${c.dim}${r.transaction.id}${c.reset}`);
+    }
+
+    if (r.status === 'provisioning' && r.direct) {
+      const s = r.direct.provisioningStatus;
+      if (s === 'free_tier_available') {
+        inf('  Status:', `${c.green}Free tier available${c.reset}`);
+        inf('  Free credits:', $(r.providerInfo.freeCreditsAmountCents ?? 0));
+      } else if (s === 'initiated') {
+        inf('  Status:', `${c.magenta}Provisioning initiated${c.reset}`);
+        inf('  Retail price:', $(r.direct.retailPriceCents));
+      } else {
+        inf('  Status:', `${c.yellow}Pending manual setup${c.reset}`);
+      }
+      if (r.direct.signupUrl) inf('  Signup:', r.direct.signupUrl);
+      if (r.direct.docsUrl)   inf('  Docs:', r.direct.docsUrl);
+    }
   }
 
-  // ── Step 4: Search for auto-match listings ───────────────────────────────────
-  console.log(fmt.step(4, 'Searching for instant-buy (auto-match) listings...'));
-  const search = await api('GET', '/api/agent/search?autoMatch=true', { agentKey });
-  console.log(fmt.ok(`${search.length} instant-buy listings found`));
-  console.log();
-
-  console.log(
-    `  ${c.bold}${'#'.padEnd(3)}  ${'Provider'.padEnd(12)}  ${'Title'.padEnd(32)}  ${'Price'.padStart(8)}  ${'Face'.padStart(8)}  Discount${c.reset}`
-  );
-  console.log(`  ${'─'.repeat(80)}`);
-
-  for (let i = 0; i < search.length; i++) {
-    const l = search[i];
-    const discount = l.faceValue
-      ? Math.round((1 - l.askingPrice / l.faceValue) * 100)
-      : null;
-    const discStr = discount != null ? `${discount}% off` : '—';
-    const title = String(l.title).slice(0, 32).padEnd(32);
-    const price = `$${(l.askingPrice / 100).toFixed(2)}`.padStart(8);
-    const face = l.faceValue ? `$${(l.faceValue / 100).toFixed(2)}`.padStart(8) : '     —  ';
-    console.log(
-      `  ${c.gray}${String(i + 1).padEnd(3)}${c.reset}  ${c.cyan}${String(l.provider).padEnd(12)}${c.reset}  ${title}  ${c.green}${price}${c.reset}  ${c.dim}${face}${c.reset}  ${c.yellow}${discStr}${c.reset}`
-    );
-  }
-
-  if (search.length === 0) {
-    console.log(fmt.error('No auto-match listings found. Cannot proceed with instant buy.'));
-    return;
-  }
-
-  // ── Step 5: Instant buy ──────────────────────────────────────────────────────
-  const target = search[0]; // cheapest (ordered by askingPrice ASC)
-  console.log(fmt.step(5, `Executing instant buy: "${target.title}"`));
-  console.log(`  ${fmt.label('Listing ID:')} ${target.id}`);
-  console.log(`  ${fmt.label('Price:')}      ${fmt.money(target.askingPrice)}`);
-
-  const buyRes = await api('POST', '/api/agent/buy', {
-    agentKey,
-    body: { listingId: target.id },
-  });
-
-  console.log(fmt.ok('Purchase complete!'));
-  console.log();
-  console.log(`  ${fmt.label('Transaction ID:')}   ${buyRes.transactionId}`);
-  console.log(`  ${fmt.label('Amount paid:')}      ${fmt.money(buyRes.amountCents)}`);
-  console.log(`  ${fmt.label('Platform fee:')}     ${fmt.money(buyRes.platformFeeCents)}`);
-  console.log(`  ${fmt.label('Seller payout:')}    ${fmt.money(buyRes.sellerPayoutCents)}`);
-  console.log(`  ${fmt.label('Status:')}           ${c.green}${buyRes.status}${c.reset}`);
-  console.log(`  ${fmt.label('Auto-release at:')}  ${new Date(buyRes.autoReleaseAt).toLocaleString()}`);
-
-  // ── Step 6: Check balance ────────────────────────────────────────────────────
-  console.log(fmt.step(6, 'Checking updated balance...'));
+  // ── Phase 5: Balance ──────────────────────────────────────────────────────
+  hdr('Phase 5  —  Post-provision state');
   const balRes = await api('GET', '/api/agent/balance', { agentKey });
-  console.log(fmt.ok(`Remaining balance: ${fmt.money(balRes.balanceCents)}`));
-
-  // ── Step 7: Transaction history ──────────────────────────────────────────────
-  console.log(fmt.step(7, 'Transaction history...'));
+  ok(`Remaining balance: ${$(balRes.balanceCents)}`);
   const txs = await api('GET', '/api/agent/status', { agentKey });
-  console.log(fmt.ok(`${txs.length} transaction(s) on record`));
-  const latest = txs[0];
-  if (latest) {
-    console.log();
-    console.log(`  ${fmt.label('Latest:')} ${latest.listingProvider} — ${latest.listingTitle}`);
-    console.log(`  ${fmt.label('Amount:')} ${fmt.money(latest.amountCents)}  │  ${fmt.label('Status:')} ${c.green}${latest.status}${c.reset}`);
+  ok(`${txs.length} marketplace transaction(s) recorded`);
+
+  // ── Now do something weird ────────────────────────────────────────────────
+  hdr('Phase 6  —  Unknown provider (any API in the world)');
+  console.log(`  ${c.dim}What happens when the agent needs a niche API that's not in${c.reset}`);
+  console.log(`  ${c.dim}the registry and has no marketplace listings?${c.reset}`);
+  nl();
+
+  const edgeCase = await api('POST', '/api/provision', {
+    agentKey,
+    body: { requirements: [{ provider: 'Hetzner Cloud' }, { provider: 'val.town' }] },
+  });
+
+  for (const r of edgeCase.results) {
+    const icon = r.status === 'provisioning' ? `${c.magenta}⟳${c.reset}` : `${c.green}✓${c.reset}`;
+    console.log(`  ${icon}  ${c.bold}${r.provider}${c.reset}  ${c.dim}(${r.providerInfo.known ? 'known' : 'unknown provider'})${c.reset}`);
+    if (r.direct?.note) {
+      console.log(`     ${c.dim}${r.direct.note}${c.reset}`);
+    }
   }
 
-  // ── Done ──────────────────────────────────────────────────────────────────────
-  console.log();
-  console.log(fmt.divider());
-  console.log(fmt.header('  Demo complete.'));
-  console.log();
-  console.log(`  Use your agent key in any HTTP client:`);
-  console.log(`  ${fmt.label('Authorization: Bearer')} ${fmt.key(agentKey)}`);
-  console.log();
-  console.log(`  ${fmt.label('Search:')}      curl -H "Authorization: Bearer ${agentKey}" ${BASE}/api/agent/search`);
-  console.log(`  ${fmt.label('Market:')}      curl -H "Authorization: Bearer ${agentKey}" ${BASE}/api/agent/market-data`);
-  console.log(`  ${fmt.label('Balance:')}     curl -H "Authorization: Bearer ${agentKey}" ${BASE}/api/agent/balance`);
-  console.log(`  ${fmt.label('Buy:')}         curl -X POST -H "Authorization: Bearer ${agentKey}" -H "Content-Type: application/json" \\`);
-  console.log(`                -d '{"listingId":"<id>"}' ${BASE}/api/agent/buy`);
-  console.log();
+  // ── Summary ───────────────────────────────────────────────────────────────
+  nl();
+  div();
+  nl();
+  console.log(`${c.bold}  How it works:${c.reset}`);
+  nl();
+  console.log(`  ${c.dim}1. Agent calls  POST /api/provision  with any providers it needs.${c.reset}`);
+  console.log(`  ${c.dim}2. Invariant checks the marketplace for discounted credits first.${c.reset}`);
+  console.log(`  ${c.dim}3. If no marketplace listing: falls back to direct provisioning.${c.reset}`);
+  console.log(`  ${c.dim}4. Knows ${registry.count}+ providers. Accepts unknown ones too.${c.reset}`);
+  console.log(`  ${c.dim}5. Agent gets a structured receipt and continues building.${c.reset}`);
+  nl();
+  console.log(`  ${c.bold}The marketplace is the supply layer.${c.reset}`);
+  console.log(`  ${c.dim}People sell unused credits at a discount. Agents buy them.${c.reset}`);
+  console.log(`  ${c.dim}When no one's selling: Invariant provisions directly.${c.reset}`);
+  nl();
+  div();
+  nl();
+  console.log(`${c.bold}  Agent key for testing:${c.reset}`);
+  nl();
+  console.log(`  ${tag(agentKey)}`);
+  nl();
+  console.log(`  ${c.gray}# Provision any APIs${c.reset}`);
+  console.log(`  curl -X POST ${BASE}/api/provision \\`);
+  console.log(`    -H "Authorization: Bearer <key>" \\`);
+  console.log(`    -H "Content-Type: application/json" \\`);
+  console.log(`    -d '{"requirements":[{"provider":"OpenAI"},{"provider":"Stripe"},{"provider":"anything"}]}'`);
+  nl();
+  console.log(`  ${c.gray}# List all known providers${c.reset}`);
+  console.log(`  curl ${BASE}/api/provision/providers`);
+  nl();
 }
 
 run().catch((err) => {
-  console.error(fmt.error(err.message));
+  console.error(`\n${c.red}✗${c.reset} ${err.message}`);
   process.exit(1);
 });
