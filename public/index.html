@@ -700,6 +700,62 @@ section {
   background: var(--accent-dim); border-bottom: 1px solid var(--border);
 }
 
+/* ── waitlist ──────────────────────────────────────── */
+.waitlist-section {
+  padding: 140px 48px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  position: relative; z-index: 2;
+}
+.waitlist-label {
+  font-family: var(--mono);
+  font-size: 0.6rem; letter-spacing: 0.25em; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 24px;
+  display: inline-block;
+  padding: 6px 20px;
+  border: 1px solid rgba(0,200,83,0.3);
+}
+.waitlist-section h2 {
+  font-family: var(--serif);
+  font-size: 3.8rem; font-weight: 900;
+  color: var(--text-bright); line-height: 1.05;
+  letter-spacing: -0.03em; margin-bottom: 16px;
+}
+.waitlist-section h2 em { color: var(--accent); font-style: italic; }
+.waitlist-sub {
+  font-family: var(--sans); font-size: 1rem; color: var(--text-dim);
+  line-height: 1.8; margin-bottom: 48px;
+}
+.waitlist-form {
+  display: flex; gap: 0; justify-content: center; max-width: 480px; margin: 0 auto;
+}
+.waitlist-input {
+  flex: 1;
+  font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.05em;
+  background: var(--surface); color: var(--text-bright);
+  border: 1px solid var(--border); border-right: none;
+  padding: 14px 20px; outline: none;
+  transition: border-color 0.3s;
+}
+.waitlist-input::placeholder { color: var(--text-dim); }
+.waitlist-input:focus { border-color: var(--accent); }
+.waitlist-btn {
+  font-family: var(--mono); font-size: 0.65rem; font-weight: 600;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 14px 28px; cursor: pointer;
+  background: var(--accent); color: #000; border: 1px solid var(--accent);
+  transition: all 0.3s; white-space: nowrap;
+}
+.waitlist-btn:hover { background: var(--accent-bright); border-color: var(--accent-bright); }
+.waitlist-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.waitlist-msg {
+  font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.08em;
+  margin-top: 16px; height: 1.4em;
+  transition: color 0.3s;
+}
+.waitlist-msg.success { color: var(--accent); }
+.waitlist-msg.error { color: var(--hot); }
+
 /* ── footer ────────────────────────────────────────── */
 footer {
   padding: 80px 48px 100px; border-top: 1px solid var(--border);
@@ -967,6 +1023,18 @@ footer .links a:hover { color: var(--accent); }
 </section>
 
 <div class="corner-hash" id="corner-hash"></div>
+
+<!-- ── waitlist ──────────────────────────────────────── -->
+<section class="waitlist-section reveal" id="waitlist">
+  <div class="waitlist-label">early access</div>
+  <h2>get on the list.<br><em>before launch.</em></h2>
+  <p class="waitlist-sub">Be first when we open the doors. One email, no spam.</p>
+  <form class="waitlist-form" id="waitlist-form">
+    <input class="waitlist-input" type="email" placeholder="your@email.com" required autocomplete="email" id="waitlist-email">
+    <button class="waitlist-btn" type="submit" id="waitlist-btn">notify me</button>
+  </form>
+  <p class="waitlist-msg" id="waitlist-msg"></p>
+</section>
 
 <footer>
   <p>Invariant &mdash; the last API you'll ever need</p>
@@ -1373,6 +1441,43 @@ function processCommand(raw){const t=raw.trim();if(!t)return;appendPrompt(t);con
 input.addEventListener('keydown',(e)=>{if(e.key==='Enter'){processCommand(input.value);input.value=''}});
 function runDemo(cmd){input.value='';processCommand(cmd);input.focus()}
 document.querySelector('.demo-terminal').addEventListener('click',()=>input.focus());
+
+// ── waitlist form ──────────────────────────────────────
+const waitlistForm = document.getElementById('waitlist-form');
+const waitlistEmail = document.getElementById('waitlist-email');
+const waitlistBtn = document.getElementById('waitlist-btn');
+const waitlistMsg = document.getElementById('waitlist-msg');
+
+waitlistForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = waitlistEmail.value.trim();
+  if (!email) return;
+  waitlistBtn.disabled = true;
+  waitlistBtn.textContent = 'sending...';
+  waitlistMsg.className = 'waitlist-msg';
+  waitlistMsg.textContent = '';
+  try {
+    const res = await fetch('/api/waitlist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    if (res.ok && data.ok) {
+      waitlistMsg.className = 'waitlist-msg success';
+      waitlistMsg.textContent = '// you\'re on the list.';
+      waitlistEmail.value = '';
+      waitlistBtn.textContent = 'done';
+    } else {
+      throw new Error(data.error || 'unknown error');
+    }
+  } catch (err) {
+    waitlistMsg.className = 'waitlist-msg error';
+    waitlistMsg.textContent = '// ' + (err.message || 'something went wrong');
+    waitlistBtn.disabled = false;
+    waitlistBtn.textContent = 'notify me';
+  }
+});
 </script>
 </body>
 </html>

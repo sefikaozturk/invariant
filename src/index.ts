@@ -9,6 +9,7 @@ import escrowRouter from './routes/escrow.js';
 import agentKeysRouter from './routes/agent-keys.js';
 import agentTradeRouter from './routes/agent-trade.js';
 import demoRouter from './routes/demo.js';
+import waitlistRouter from './routes/waitlist.js';
 import { optionalAuth } from './middleware/auth.js';
 import { rateLimit } from './lib/rate-limit.js';
 
@@ -41,6 +42,7 @@ app.route('/api/escrow', escrowRouter);
 app.route('/api/agent-keys', agentKeysRouter);
 app.route('/api/agent', agentTradeRouter);
 app.route('/api/demo', demoRouter);
+app.route('/api/waitlist', waitlistRouter);
 
 // static files
 app.use('/*', serveStatic({ root: './public' }));

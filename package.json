@@ -15,6 +15,7 @@
     "@types/node": "^22",
     "drizzle-kit": "^0.30",
     "drizzle-orm": "^0.38",
+    "googleapis": "^171.4.0",
     "hono": "^4",
     "jose": "^6",
     "postgres": "^3",
