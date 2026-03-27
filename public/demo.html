@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Invariant — Provision Flow Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0e0e10;
+  --surface: #161618;
+  --border: #2a2a2e;
+  --text: #c8c8cc;
+  --text-dim: #6a6a70;
+  --text-bright: #f0f0f2;
+  --accent: #00c853;
+  --accent-dim: rgba(0, 200, 83, 0.1);
+  --accent-bright: #00ff6a;
+  --hot: #e8384f;
+  --electric: #7b68ee;
+  --cyan: #00d4aa;
+  --orange: #f39237;
+  --terminal-bg: #08080a;
+  --terminal-border: #1e1e22;
+  --terminal-text: #a0a0a8;
+  --terminal-dim: #505058;
+  --terminal-bright: #e8e8f0;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'Inter', -apple-system, sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+::selection { background: var(--accent); color: #000; }
+
+/* ── layout ─────────────────────────────────── */
+.container {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.logo {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+}
+
+.logo span { color: var(--text-dim); font-weight: 400; }
+
+.controls {
+  display: flex;
+  gap: 10px;
+}
+
+.btn {
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-dim);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* ── progress bar ───────────────────────────── */
+.progress-bar {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 36px;
+}
+
+.progress-segment {
+  flex: 1;
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  transition: background 0.4s ease;
+  position: relative;
+}
+
+.progress-segment.done {
+  background: var(--accent);
+  box-shadow: 0 0 8px rgba(0,200,83,0.3);
+}
+
+.progress-segment.active {
+  background: linear-gradient(90deg, var(--accent), var(--border));
+  animation: pulse-seg 1s ease infinite;
+}
+
+@keyframes pulse-seg {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.phase-labels {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+  margin-bottom: 28px;
+}
+
+.phase-label {
+  flex: 1;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text-dim);
+  text-align: center;
+  opacity: 0.4;
+  transition: all 0.3s;
+}
+
+.phase-label.done, .phase-label.active {
+  opacity: 1;
+  color: var(--accent);
+}
+
+/* ── terminal ───────────────────────────────── */
+.terminal {
+  background: var(--terminal-bg);
+  border: 1px solid var(--terminal-border);
+  border-radius: 8px;
+  overflow: hidden;
+  height: calc(100vh - 220px);
+  min-height: 320px;
+  max-height: 700px;
+  display: flex;
+  flex-direction: column;
+}
+
+.terminal-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--terminal-border);
+}
+
+.dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+}
+
+.dot.r { background: #ff5f57; }
+.dot.y { background: #ffbd2e; }
+.dot.g { background: #28c840; }
+
+.terminal-title {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-left: 8px;
+}
+
+.terminal-body {
+  padding: 20px 24px;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.7;
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+}
+
+.terminal-body::-webkit-scrollbar { width: 6px; }
+.terminal-body::-webkit-scrollbar-track { background: transparent; }
+.terminal-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.terminal-body::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+/* ── phase content ──────────────────────────── */
+.phase {
+  display: none;
+}
+
+.phase.visible {
+  display: block;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.line {
+  opacity: 0;
+  transform: translateY(4px);
+  transition: all 0.3s ease;
+}
+
+.line.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.prompt {
+  color: var(--accent);
+}
+
+.prompt::before {
+  content: '$ ';
+  color: var(--text-dim);
+}
+
+.comment {
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.success {
+  color: var(--accent);
+}
+
+.success::before {
+  content: '  ✓ ';
+}
+
+.pending {
+  color: var(--orange);
+}
+
+.pending::before {
+  content: '  ⟳ ';
+}
+
+.warn {
+  color: var(--orange);
+}
+
+.warn::before {
+  content: '  ⟳ ';
+}
+
+.info {
+  color: var(--terminal-text);
+}
+
+.key {
+  color: var(--electric);
+  background: rgba(123,104,238,0.08);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.savings {
+  color: var(--accent-bright);
+  font-weight: 600;
+  text-shadow: 0 0 12px rgba(0,255,106,0.4);
+  animation: glow 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+  from { text-shadow: 0 0 6px rgba(0,255,106,0.2); }
+  to { text-shadow: 0 0 16px rgba(0,255,106,0.5); }
+}
+
+.highlight {
+  color: var(--text-bright);
+  font-weight: 500;
+}
+
+.dim { color: var(--text-dim); }
+.accent { color: var(--accent); }
+.bright { color: var(--text-bright); }
+
+.stat-line {
+  display: inline-block;
+  padding: 2px 0;
+}
+
+/* ── category grid ──────────────────────────── */
+.cat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 6px 20px;
+  margin: 4px 0;
+}
+
+.cat-item {
+  opacity: 0;
+  transform: translateX(-8px);
+  transition: all 0.3s ease;
+}
+
+.cat-item.show {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.cat-name {
+  color: var(--accent);
+  font-weight: 500;
+  min-width: 80px;
+  display: inline-block;
+}
+
+.cat-providers {
+  color: var(--text-dim);
+}
+
+/* ── post-json block ────────────────────────── */
+.json-block {
+  background: rgba(0,200,83,0.03);
+  border-left: 2px solid var(--accent);
+  padding: 8px 14px;
+  margin: 6px 0;
+  border-radius: 0 4px 4px 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--terminal-text);
+}
+
+.json-key { color: var(--electric); }
+.json-str { color: var(--accent); }
+.json-bracket { color: var(--text-dim); }
+
+/* ── provision result ───────────────────────── */
+.provision-item {
+  padding: 3px 0;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: all 0.35s ease;
+}
+
+.provision-item.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.prov-savings {
+  display: inline-block;
+  animation: savings-pop 0.4s ease;
+}
+
+@keyframes savings-pop {
+  0% { transform: scale(0.8); opacity: 0; }
+  60% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ── summary box ────────────────────────────── */
+.summary-box {
+  border: 1px solid var(--accent);
+  background: var(--accent-dim);
+  border-radius: 6px;
+  padding: 14px 18px;
+  margin: 10px 0;
+  line-height: 1.8;
+}
+
+/* ── cursor blink ───────────────────────────── */
+.cursor {
+  display: inline-block;
+  width: 8px;
+  height: 15px;
+  background: var(--accent);
+  vertical-align: text-bottom;
+  animation: blink 1s step-end infinite;
+  margin-left: 2px;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* ── divider ────────────────────────────────── */
+.phase-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 16px 0;
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+
+.phase-divider.show { opacity: 1; }
+
+/* ── replay section ─────────────────────────── */
+.post-demo {
+  margin-top: 32px;
+  display: none;
+}
+
+.post-demo.visible {
+  display: block;
+  animation: fadeIn 0.5s ease;
+}
+
+.curl-block {
+  background: var(--terminal-bg);
+  border: 1px solid var(--terminal-border);
+  border-radius: 6px;
+  padding: 16px 20px;
+  margin: 12px 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--terminal-text);
+  overflow-x: auto;
+}
+
+.curl-block .comment { font-size: 11px; }
+
+.section-title {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text-dim);
+  margin: 24px 0 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ── responsive ─────────────────────────────── */
+@media (max-width: 600px) {
+  .container { padding: 20px 12px 60px; }
+  .terminal-body { padding: 14px 14px; font-size: 11.5px; }
+  .cat-grid { grid-template-columns: 1fr; }
+  .phase-labels { display: none; }
+  header { flex-direction: column; gap: 12px; align-items: flex-start; }
+  .json-block { font-size: 10.5px; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="logo">invariant <span>/ provision demo</span></div>
+    <div class="controls">
+      <button class="btn" id="btn-skip">skip</button>
+      <button class="btn" id="btn-replay" style="display:none">replay</button>
+    </div>
+  </header>
+
+  <div class="progress-bar" id="progress-bar"></div>
+  <div class="phase-labels" id="phase-labels"></div>
+
+  <div class="terminal">
+    <div class="terminal-bar">
+      <div class="dot r"></div>
+      <div class="dot y"></div>
+      <div class="dot g"></div>
+      <div class="terminal-title">invariant provision --demo</div>
+    </div>
+    <div class="terminal-body" id="terminal-body">
+      <span class="cursor" id="cursor"></span>
+    </div>
+  </div>
+
+  <div class="post-demo" id="post-demo">
+    <div class="section-title">try it yourself</div>
+    <div class="curl-block">
+      <div class="comment"># register an agent</div>
+      <div>curl -X POST https://api.invariant.sh/v1/agents \</div>
+      <div>&nbsp;&nbsp;-H "Authorization: Bearer $INVARIANT_KEY" \</div>
+      <div>&nbsp;&nbsp;-d '{"name": "rag-chatbot", "budget": 1000}'</div>
+      <br>
+      <div class="comment"># provision 5 APIs in one call</div>
+      <div>curl -X POST https://api.invariant.sh/v1/provision \</div>
+      <div>&nbsp;&nbsp;-H "Authorization: Bearer $INVARIANT_KEY" \</div>
+      <div>&nbsp;&nbsp;-d '{"providers": ["openai","anthropic","pinecone","resend","vercel"]}'</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const PHASES = [
+  { id: 'intro', label: 'intro' },
+  { id: 'seed', label: 'seed' },
+  { id: 'register', label: 'agent' },
+  { id: 'registry', label: 'registry' },
+  { id: 'provision', label: 'provision' },
+  { id: 'post', label: 'state' },
+  { id: 'unknown', label: 'edge' },
+  { id: 'summary', label: 'done' },
+];
+
+const body = document.getElementById('terminal-body');
+const cursorEl = document.getElementById('cursor');
+const progressBar = document.getElementById('progress-bar');
+const phaseLabels = document.getElementById('phase-labels');
+const btnSkip = document.getElementById('btn-skip');
+const btnReplay = document.getElementById('btn-replay');
+const postDemo = document.getElementById('post-demo');
+
+let aborted = false;
+let running = false;
+
+// build progress segments
+PHASES.forEach((p, i) => {
+  const seg = document.createElement('div');
+  seg.className = 'progress-segment';
+  seg.dataset.idx = i;
+  progressBar.appendChild(seg);
+
+  const lbl = document.createElement('div');
+  lbl.className = 'phase-label';
+  lbl.textContent = p.label;
+  lbl.dataset.idx = i;
+  phaseLabels.appendChild(lbl);
+});
+
+function setProgress(idx) {
+  document.querySelectorAll('.progress-segment').forEach((s, i) => {
+    s.classList.toggle('done', i < idx);
+    s.classList.toggle('active', i === idx);
+  });
+  document.querySelectorAll('.phase-label').forEach((l, i) => {
+    l.classList.toggle('done', i < idx);
+    l.classList.toggle('active', i === idx);
+  });
+}
+
+function wait(ms) {
+  return new Promise(r => {
+    if (aborted) { r(); return; }
+    setTimeout(r, aborted ? 0 : ms);
+  });
+}
+
+function scrollDown() {
+  body.scrollTop = body.scrollHeight;
+}
+
+function addLine(html, cls = '') {
+  const div = document.createElement('div');
+  div.className = 'line ' + cls;
+  div.innerHTML = html;
+  body.insertBefore(div, cursorEl);
+  void div.offsetWidth;
+  div.classList.add('show');
+  scrollDown();
+  return div;
+}
+
+function addLines(lines, delay = 120) {
+  return new Promise(async (resolve) => {
+    for (const l of lines) {
+      if (aborted) {
+        const div = document.createElement('div');
+        div.className = 'line show ' + (l.cls || '');
+        div.innerHTML = l.html;
+        body.insertBefore(div, cursorEl);
+      } else {
+        addLine(l.html, l.cls || '');
+        await wait(delay);
+      }
+    }
+    resolve();
+  });
+}
+
+function addDivider() {
+  const d = document.createElement('div');
+  d.className = 'phase-divider';
+  body.insertBefore(d, cursorEl);
+  void d.offsetWidth;
+  d.classList.add('show');
+  scrollDown();
+}
+
+function clearTerminal() {
+  while (body.firstChild && body.firstChild !== cursorEl) {
+    body.removeChild(body.firstChild);
+  }
+}
+
+async function runDemo() {
+  running = true;
+  aborted = false;
+  clearTerminal();
+  btnSkip.style.display = '';
+  btnReplay.style.display = 'none';
+  postDemo.classList.remove('visible');
+  setProgress(0);
+
+  const d = aborted ? 0 : 1;
+  const fast = aborted ? 10 : 120;
+  const med = aborted ? 10 : 200;
+  const slow = aborted ? 10 : 350;
+
+  // ── intro ──
+  setProgress(0);
+  await addLines([
+    { html: '<span class="comment"># scenario: build a RAG chatbot</span>' },
+  ], fast);
+  await wait(300 * d);
+  await addLines([
+    { html: '<span class="bright">"Build me a RAG chatbot. Use OpenAI for embeddings, Anthropic for</span>' },
+    { html: '<span class="bright">&nbsp;inference, Pinecone for vectors, Resend for email notifications,</span>' },
+    { html: '<span class="bright">&nbsp;and deploy it on Vercel."</span>' },
+  ], fast);
+  await wait(600 * d);
+  await addLines([
+    { html: '' },
+    { html: '<span class="dim">That\'s 5 API providers.</span>' },
+    { html: '<span class="dim">Normally: 5 sign-up flows, 5 billing pages, 5 sets of keys.</span>' },
+    { html: '<span class="accent">With Invariant: one call.</span>' },
+  ], med);
+  await wait(800 * d);
+  addDivider();
+
+  // ── phase 1: seed ──
+  setProgress(1);
+  await wait(300 * d);
+  await addLines([
+    { html: '' },
+    { html: '<span class="comment"># phase 1 — seed the marketplace</span>' },
+    { html: '<span class="prompt">invariant marketplace seed</span>' },
+  ], fast);
+  await wait(400 * d);
+  await addLines([
+    { html: '', cls: 'success', },
+  ], 0);
+  // manual success lines
+  addLine('Marketplace ready (7 listings)', 'success');
+  await wait(slow);
+  addLine('Agent wallet: <span class="bright">$1,000.00</span>', 'success');
+  await wait(600 * d);
+  addDivider();
+
+  // ── phase 2: register ──
+  setProgress(2);
+  await wait(300 * d);
+  await addLines([
+    { html: '' },
+    { html: '<span class="comment"># phase 2 — agent registers with Invariant</span>' },
+    { html: '<span class="prompt">invariant agent register --name rag-chatbot</span>' },
+  ], fast);
+  await wait(400 * d);
+  addLine('Agent key issued: <span class="key">inv_live_a3b8...f4e2</span>', 'success');
+  await wait(slow);
+  addLine('Rate limit: <span class="bright">60 req/min</span>', 'success');
+  await wait(600 * d);
+  addDivider();
+
+  // ── phase 3: registry ──
+  setProgress(3);
+  await wait(300 * d);
+  await addLines([
+    { html: '' },
+    { html: '<span class="comment"># phase 3 — what Invariant knows about</span>' },
+    { html: '<span class="prompt">invariant registry list</span>' },
+  ], fast);
+  await wait(400 * d);
+  addLine('<span class="bright">27 providers</span> in the registry', 'success');
+  await wait(250 * d);
+  addLine('', '');
+
+  const categories = [
+    { name: 'ai', providers: 'OpenAI, Anthropic, Mistral, Cohere, Groq, Replicate, Together AI, DeepSeek, ElevenLabs' },
+    { name: 'cloud', providers: 'AWS, Google Cloud, Vercel, Supabase, Railway, DigitalOcean' },
+    { name: 'comms', providers: 'Twilio, Resend, SendGrid' },
+    { name: 'payments', providers: 'Stripe' },
+    { name: 'data', providers: 'Pinecone, Upstash, Neon' },
+    { name: 'search', providers: 'Algolia' },
+    { name: 'auth', providers: 'Auth0, Clerk' },
+    { name: 'monitoring', providers: 'Sentry, Datadog' },
+  ];
+
+  // grid container
+  const grid = document.createElement('div');
+  grid.className = 'cat-grid';
+  body.insertBefore(grid, cursorEl);
+
+  for (const cat of categories) {
+    const item = document.createElement('div');
+    item.className = 'cat-item';
+    item.innerHTML = `<span class="cat-name">${cat.name}</span> <span class="cat-providers">${cat.providers}</span>`;
+    grid.appendChild(item);
+    if (!aborted) {
+      await wait(150);
+      void item.offsetWidth;
+    }
+    item.classList.add('show');
+    scrollDown();
+  }
+
+  await wait(600 * d);
+  addDivider();
+
+  // ── phase 4: provision ──
+  setProgress(4);
+  await wait(300 * d);
+  await addLines([
+    { html: '' },
+    { html: '<span class="comment"># phase 4 — agent provisions everything it needs</span>' },
+    { html: '<span class="prompt">invariant provision --providers openai,anthropic,pinecone,resend,vercel</span>' },
+  ], fast);
+  await wait(300 * d);
+
+  // json block
+  const jsonEl = document.createElement('div');
+  jsonEl.className = 'json-block line';
+  jsonEl.innerHTML = `<span class="json-bracket">{</span>
+  <span class="json-key">"agent"</span>: <span class="json-str">"rag-chatbot"</span>,
+  <span class="json-key">"providers"</span>: <span class="json-bracket">[</span><span class="json-str">"openai"</span>, <span class="json-str">"anthropic"</span>, <span class="json-str">"pinecone"</span>, <span class="json-str">"resend"</span>, <span class="json-str">"vercel"</span><span class="json-bracket">]</span>,
+  <span class="json-key">"strategy"</span>: <span class="json-str">"marketplace_first"</span>
+<span class="json-bracket">}</span>`;
+  body.insertBefore(jsonEl, cursorEl);
+  void jsonEl.offsetWidth;
+  jsonEl.classList.add('show');
+  scrollDown();
+  await wait(500 * d);
+
+  addLine('', '');
+
+  const provisions = [
+    { type: 'success', text: 'OpenAI <span class="dim">via marketplace</span> — paid <span class="bright">$38.00</span>, retail $50.00, saved <span class="savings">$12.00 (24% off)</span>' },
+    { type: 'success', text: 'Anthropic <span class="dim">via marketplace</span> — paid <span class="bright">$75.00</span>, retail $100.00, saved <span class="savings">$25.00 (25% off)</span>' },
+    { type: 'success', text: 'Vercel <span class="dim">via marketplace</span> — paid <span class="bright">$72.00</span>, retail $100.00, saved <span class="savings">$28.00 (28% off)</span>' },
+    { type: 'pending', text: 'Pinecone <span class="dim">via direct</span> — provisioning initiated, retail <span class="bright">$70.00</span>' },
+    { type: 'pending', text: 'Resend <span class="dim">via direct</span> — provisioning initiated, retail <span class="bright">$20.00</span>' },
+  ];
+
+  for (const p of provisions) {
+    const div = document.createElement('div');
+    div.className = `provision-item ${p.type}`;
+    div.innerHTML = p.text;
+    body.insertBefore(div, cursorEl);
+    if (!aborted) {
+      await wait(80);
+      void div.offsetWidth;
+    }
+    div.classList.add('show');
+    scrollDown();
+    await wait(400 * d);
+  }
+
+  await wait(300 * d);
+  addLine('', '');
+
+  // summary box
+  const sbox = document.createElement('div');
+  sbox.className = 'summary-box line';
+  sbox.innerHTML = `<span class="accent">Status: FULFILLED</span>
+<span class="info">From marketplace: <span class="bright">3</span> &nbsp;|&nbsp; Direct: <span class="bright">2</span></span>
+<span class="info">Total spent: <span class="bright">$185.00</span> &nbsp;|&nbsp; Saved: <span class="savings">$65.00</span></span>`;
+  body.insertBefore(sbox, cursorEl);
+  void sbox.offsetWidth;
+  sbox.classList.add('show');
+  scrollDown();
+
+  await wait(800 * d);
+  addDivider();
+
+  // ── phase 5: post-provision ──
+  setProgress(5);
+  await wait(300 * d);
+  await addLines([
+    { html: '' },
+    { html: '<span class="comment"># phase 5 — post-provision state</span>' },
+    { html: '<span class="prompt">invariant wallet balance</span>' },
+  ], fast);
+  await wait(400 * d);
+  addLine('Remaining balance: <span class="bright">$815.00</span>', 'success');
+  await wait(slow);
+  addLine('3 marketplace transactions recorded', 'success');
+  await wait(600 * d);
+  addDivider();
+
+  // ── phase 6: unknown ──
+  setProgress(6);
+  await wait(300 * d);
+  await addLines([
+    { html: '' },
+    { html: '<span class="comment"># phase 6 — unknown provider handling</span>' },
+    { html: '<span class="dim">What happens when the agent needs a niche API not in the registry?</span>' },
+    { html: '' },
+    { html: '<span class="prompt">invariant provision --providers hetzner-cloud,val.town</span>' },
+  ], fast);
+  await wait(500 * d);
+  addLine('Hetzner Cloud <span class="dim">(unknown provider)</span> — handled gracefully', 'warn');
+  await wait(slow);
+  addLine('val.town <span class="dim">(unknown provider)</span> — handled gracefully', 'warn');
+  await wait(700 * d);
+  addDivider();
+
+  // ── summary ──
+  setProgress(7);
+  await wait(300 * d);
+  await addLines([
+    { html: '' },
+    { html: '<span class="accent">The marketplace is the supply layer.</span>' },
+    { html: '<span class="info">People sell unused credits at a discount. Agents buy them.</span>' },
+    { html: '<span class="info">When no one\'s selling: Invariant provisions directly.</span>' },
+  ], med);
+
+  await wait(400 * d);
+  addLine('', '');
+  addLine('<span class="dim">demo complete.</span>', '');
+
+  // done
+  setProgress(8);
+  btnSkip.style.display = 'none';
+  btnReplay.style.display = '';
+  postDemo.classList.add('visible');
+  cursorEl.style.display = 'none';
+  running = false;
+}
+
+function skipToEnd() {
+  aborted = true;
+}
+
+btnSkip.addEventListener('click', () => {
+  if (running) skipToEnd();
+});
+
+btnReplay.addEventListener('click', () => {
+  if (!running) {
+    cursorEl.style.display = '';
+    runDemo();
+  }
+});
+
+// auto-play
+runDemo();
+</script>
+</body>
+</html>
